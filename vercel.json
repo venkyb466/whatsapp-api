@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/send-campaign?secret=YOUR_SECRET_HERE",
-      "schedule": "* * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
