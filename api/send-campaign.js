@@ -86,15 +86,12 @@ export default async function handler(req, res) {
   }
 
   // 1. Get contacts who haven't been sent this campaign yet
-  const { data: contacts, error: fetchError } = await supabase
-    .from('contacts')
-    .select('id, name, phone')
-    .not(
-      'id',
-      'in',
-      `(select contact_id from campaign_log where campaign_name = '${CAMPAIGN_NAME}' and status in ('sent','delivered','read'))`
-    )
-    .limit(BATCH_SIZE);
+  //    (uses the get_pending_contacts() database function in Supabase,
+  //     which excludes anyone already marked sent/delivered/read for this campaign)
+  const { data: contacts, error: fetchError } = await supabase.rpc(
+    'get_pending_contacts',
+    { p_campaign_name: CAMPAIGN_NAME, p_limit: BATCH_SIZE }
+    );
 
   if (fetchError) {
     return res.status(500).json({ error: fetchError.message });
