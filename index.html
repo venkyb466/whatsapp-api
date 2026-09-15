@@ -126,6 +126,7 @@
     <button class="nav" data-view="campaigns">📣 Campaigns</button>
     <button class="nav" data-view="templates">📄 Templates</button>
     <button class="nav" data-view="inbox">💬 Inbox <span class="badge hidden" id="unreadBadge">0</span></button>
+    <button class="nav" data-view="billing">💳 Billing</button>
     <button class="nav" data-view="settings">⚙️ Settings</button>
     <div class="foot"><span id="who"></span><button id="logout">Sign out</button></div>
   </aside>
@@ -190,6 +191,12 @@
           <div class="empty" style="margin:auto">Select a conversation</div>
         </div>
       </div>
+    </div>
+
+    <!-- BILLING -->
+    <div id="view-billing" class="hidden">
+      <div class="row" style="margin-bottom:14px"><h2 style="margin:0">Billing</h2><div class="spacer"></div><button id="btnRefreshBilling">↻</button></div>
+      <div id="billingBody">Loading…</div>
     </div>
 
     <!-- SETTINGS -->
@@ -291,8 +298,9 @@ sb.auth.onAuthStateChange((_e, s) => {
 document.querySelectorAll('button.nav').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
 function showView(v){
   document.querySelectorAll('button.nav').forEach(b => b.classList.toggle('active', b.dataset.view===v));
-  ['contacts','campaigns','templates','inbox','settings'].forEach(x => $('view-'+x).classList.toggle('hidden', x!==v));
+  ['contacts','campaigns','templates','inbox','billing','settings'].forEach(x => $('view-'+x).classList.toggle('hidden', x!==v));
   clearInterval(inboxTimer);
+  if (v==='billing') loadBilling();
   if (v==='campaigns') loadCampaigns();
   if (v==='templates') loadTemplates();
   if (v==='inbox') { loadInbox(); inboxTimer = setInterval(loadInbox, 8000); }
@@ -543,6 +551,60 @@ async function loadThread(id, quiet){
     $('sendTpl').onclick=async()=>{ const [template,language]=($('replyTpl').value||'').split('|'); if(!template) return; $('sendTpl').disabled=true;
       try{ await api('/api/send-message',{method:'POST',body:{contact_id:id,template,language}}); toast('Template sent'); await loadThread(id); }catch(err){ toast(err.message); $('sendTpl').disabled=false; } }; }
 }
+
+// ---------- billing ----------
+const RATE_KEY='np_rates';
+function getRates(){ try{ return Object.assign({MARKETING:0.7846, UTILITY:0.115, AUTHENTICATION:0.115, SERVICE:0}, JSON.parse(localStorage.getItem(RATE_KEY)||'{}')); }catch{ return {MARKETING:0.7846, UTILITY:0.115, AUTHENTICATION:0.115, SERVICE:0}; } }
+function inr(n){ return '₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2}); }
+async function loadBilling(){
+  const el=$('billingBody'); el.innerHTML='Loading from Meta…';
+  try{
+    const b=await api('/api/billing'); const rates=getRates(); const a=b.account||{};
+    const catRows=Object.entries((b.spend30d&&b.spend30d.byCategory)||{});
+    const limitTier={TIER_50:50,TIER_250:250,TIER_1K:1000,TIER_2K:2000,TIER_10K:10000,TIER_100K:100000,TIER_UNLIMITED:'unlimited'}[b.phone?.messaging_limit_tier]||b.phone?.messaging_limit_tier||'—';
+    const campRows=(b.campaigns||[]).map(c=>`<tr><td>${esc(c.name)}</td><td><span class="status ${esc(c.status)}">${esc(c.status)}</span></td><td>${c.sent} / ${c.total_targeted}</td><td>${inr(c.sent*rates.MARKETING)}</td><td>${inr(c.total_targeted*rates.MARKETING)}</td></tr>`).join('');
+    el.innerHTML=`
+      <div class="stats">
+        <div class="stat"><b>${b.hasPaymentMethod?'✅':'❌'}</b><span>Payment method ${b.hasPaymentMethod?'on file':'missing'}</span></div>
+        <div class="stat"><b>${b.spend30d?inr(b.spend30d.total):'—'}</b><span>Meta charges, last 30 days</span></div>
+        <div class="stat"><b>${b.spend30d?b.spend30d.volume:'—'}</b><span>Billable messages, 30 days</span></div>
+        <div class="stat"><b>${limitTier}</b><span>Daily new-conversation limit</span></div>
+        <div class="stat"><b>${esc(b.phone?.quality_rating||'—')}</b><span>Number quality</span></div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="margin:0 0 6px">Payment method</h3>
+        ${b.hasPaymentMethod
+          ? `<p class="muted" style="margin:0 0 8px">Meta bills this account directly (funding ID ${esc(a.primary_funding_id)}). Charges appear in Meta's Billing hub as they accrue.</p>`
+          : `<p class="err" style="margin:0 0 8px">No payment method on the WhatsApp account. Marketing/utility messages will fail until one is added — only free replies inside the 24-hour window work.</p>`}
+        <div class="row">
+          <a href="https://business.facebook.com/billing_hub/accounts?business_id=1971674550040578&placement=whatsapp" target="_blank"><button class="primary">${b.hasPaymentMethod?'Manage in Meta Billing hub':'Add payment method in Meta'}</button></a>
+          <a href="https://business.facebook.com/billing_hub/payment_activity?business_id=1971674550040578" target="_blank"><button>Payment activity & invoices</button></a>
+          <span class="muted" style="font-size:12px">Account review: ${esc(a.account_review_status||'—')} · Business verification: ${esc(a.business_verification_status||'—')}${a.on_behalf_of_business_info?' · managed by partner '+esc(a.on_behalf_of_business_info.name||''):''}</span>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="margin:0 0 6px">Meta charges by category (last 30 days)</h3>
+        ${b.spendError?`<div class="muted">Not available yet: ${esc(b.spendError)}</div>`:''}
+        ${catRows.length?`<div class="tablewrap"><table style="min-width:0"><thead><tr><th>Category</th><th>Messages</th><th>Cost (${esc(a.currency||'INR')})</th></tr></thead><tbody>${catRows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.volume}</td><td>${inr(v.cost)}</td></tr>`).join('')}</tbody></table></div>`:(b.spendError?'':'<div class="muted">No billable messages in the last 30 days.</div>')}
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="margin:0 0 6px">Campaign cost estimates</h3>
+        <p class="muted" style="margin:0 0 8px">Estimated at your configured marketing rate of <b>${inr(rates.MARKETING)}</b> per message (India marketing rate — check <a href="https://developers.facebook.com/docs/whatsapp/pricing" target="_blank">Meta's rate card</a>). Actual charges come from Meta above. All-time messages sent from this platform: <b>${b.totalSentAllTime}</b> (≈ ${inr(b.totalSentAllTime*rates.MARKETING)}).</p>
+        ${campRows?`<div class="tablewrap"><table style="min-width:0"><thead><tr><th>Campaign</th><th>Status</th><th>Sent / targeted</th><th>Cost so far</th><th>Full-run estimate</th></tr></thead><tbody>${campRows}</tbody></table></div>`:'<div class="muted">No campaigns yet.</div>'}
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 6px">Rates used for estimates</h3>
+        <div class="row">
+          <label style="margin:0">Marketing ₹</label><input type="text" id="rateM" value="${rates.MARKETING}" style="width:90px">
+          <label style="margin:0">Utility ₹</label><input type="text" id="rateU" value="${rates.UTILITY}" style="width:90px">
+          <label style="margin:0">Authentication ₹</label><input type="text" id="rateA" value="${rates.AUTHENTICATION}" style="width:90px">
+          <button id="saveRates">Save</button>
+        </div>
+      </div>`;
+    $('saveRates').onclick=()=>{ try{ localStorage.setItem(RATE_KEY, JSON.stringify({MARKETING:+$('rateM').value||0, UTILITY:+$('rateU').value||0, AUTHENTICATION:+$('rateA').value||0})); }catch{} toast('Rates saved'); loadBilling(); };
+  }catch(err){ el.innerHTML=`<div class="err">${esc(err.message)}</div>`; }
+}
+$('btnRefreshBilling').onclick=loadBilling;
 
 // ---------- settings ----------
 async function loadSetup(){
