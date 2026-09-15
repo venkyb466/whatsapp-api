@@ -565,16 +565,18 @@ async function loadBilling(){
     const campRows=(b.campaigns||[]).map(c=>`<tr><td>${esc(c.name)}</td><td><span class="status ${esc(c.status)}">${esc(c.status)}</span></td><td>${c.sent} / ${c.total_targeted}</td><td>${inr(c.sent*rates.MARKETING)}</td><td>${inr(c.total_targeted*rates.MARKETING)}</td></tr>`).join('');
     el.innerHTML=`
       <div class="stats">
-        <div class="stat"><b>${b.hasPaymentMethod?'✅':'❌'}</b><span>Payment method ${b.hasPaymentMethod?'on file':'missing'}</span></div>
-        <div class="stat"><b>${b.spend30d?inr(b.spend30d.total):'—'}</b><span>Meta charges, last 30 days</span></div>
+        <div class="stat"><b>${b.fundingKnown?(b.hasPaymentMethod?'✅':'❌'):'?'}</b><span>Payment method ${b.fundingKnown?(b.hasPaymentMethod?'on file':'missing'):'— check in Meta'}</span></div>
+        <div class="stat"><b>${b.spend30d&&b.spend30d.total!=null?inr(b.spend30d.total):(b.spend30d?inr(b.spend30d.volume*rates.MARKETING)+'*':'—')}</b><span>${b.spend30d&&b.spend30d.total!=null?'Meta charges, last 30 days':'Est. spend, last 30 days'}</span></div>
         <div class="stat"><b>${b.spend30d?b.spend30d.volume:'—'}</b><span>Billable messages, 30 days</span></div>
         <div class="stat"><b>${limitTier}</b><span>Daily new-conversation limit</span></div>
         <div class="stat"><b>${esc(b.phone?.quality_rating||'—')}</b><span>Number quality</span></div>
       </div>
       <div class="card" style="margin-bottom:12px">
         <h3 style="margin:0 0 6px">Payment method</h3>
-        ${b.hasPaymentMethod
-          ? `<p class="muted" style="margin:0 0 8px">Meta bills this account directly (funding ID ${esc(a.primary_funding_id)}). Charges appear in Meta's Billing hub as they accrue.</p>`
+        ${!b.fundingKnown
+          ? `<p class="muted" style="margin:0 0 8px">Meta only exposes payment-method details to solution providers, so check it in the Billing hub. The account needs a card/UPI on file for marketing and utility messages; replies inside the 24-hour window are free and work without one.</p>`
+          : b.hasPaymentMethod
+          ? `<p class="muted" style="margin:0 0 8px">Meta bills this account directly. Charges appear in Meta's Billing hub as they accrue.</p>`
           : `<p class="err" style="margin:0 0 8px">No payment method on the WhatsApp account. Marketing/utility messages will fail until one is added — only free replies inside the 24-hour window work.</p>`}
         <div class="row">
           <a href="https://business.facebook.com/billing_hub/accounts?business_id=1971674550040578&placement=whatsapp" target="_blank"><button class="primary">${b.hasPaymentMethod?'Manage in Meta Billing hub':'Add payment method in Meta'}</button></a>
@@ -585,7 +587,8 @@ async function loadBilling(){
       <div class="card" style="margin-bottom:12px">
         <h3 style="margin:0 0 6px">Meta charges by category (last 30 days)</h3>
         ${b.spendError?`<div class="muted">Not available yet: ${esc(b.spendError)}</div>`:''}
-        ${catRows.length?`<div class="tablewrap"><table style="min-width:0"><thead><tr><th>Category</th><th>Messages</th><th>Cost (${esc(a.currency||'INR')})</th></tr></thead><tbody>${catRows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.volume}</td><td>${inr(v.cost)}</td></tr>`).join('')}</tbody></table></div>`:(b.spendError?'':'<div class="muted">No billable messages in the last 30 days.</div>')}
+        ${b.spendNote?`<div class="muted" style="margin-bottom:8px">${esc(b.spendNote)}</div>`:''}
+        ${catRows.length?`<div class="tablewrap"><table style="min-width:0"><thead><tr><th>Category</th><th>Messages</th><th>Cost (${esc(a.currency||'INR')})</th></tr></thead><tbody>${catRows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.volume}</td><td>${v.cost==null?inr(v.volume*rates.MARKETING)+' (est.)':inr(v.cost)}</td></tr>`).join('')}</tbody></table></div>`:(b.spendError?'':'<div class="muted">No billable messages in the last 30 days.</div>')}
       </div>
       <div class="card" style="margin-bottom:12px">
         <h3 style="margin:0 0 6px">Campaign cost estimates</h3>
