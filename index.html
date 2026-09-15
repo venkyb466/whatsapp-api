@@ -3,34 +3,47 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WhatsApp Contacts</title>
+<title>Namo Padmavati · WhatsApp</title>
 <style>
-  :root{--bg:#f6f7f9;--card:#fff;--ink:#1a1d23;--muted:#6b7280;--line:#e5e7eb;--brand:#128c7e;--brand-dk:#0d6b60;--danger:#dc2626;--chip:#e6f4f1}
+  :root{--bg:#f4f6f8;--card:#fff;--ink:#1a1d23;--muted:#6b7280;--line:#e5e7eb;--brand:#128c7e;--brand-dk:#0d6b60;--chip:#e6f4f1;--danger:#dc2626;--warn:#b45309;--side:#111b21}
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-  button,input,select{font:inherit}
+  button,input,select,textarea{font:inherit}
   button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;color:var(--ink)}
   button:hover{background:#f3f4f6}
   button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
   button.primary:hover{background:var(--brand-dk)}
   button.danger{color:var(--danger);border-color:#fecaca}
   button.danger:hover{background:#fef2f2}
+  button.sm{padding:4px 9px;font-size:12px}
   button:disabled{opacity:.5;cursor:not-allowed}
-  input[type=text],input[type=email],input[type=password],select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;width:100%}
+  input[type=text],input[type=email],input[type=password],select,textarea{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;width:100%}
+  textarea{resize:vertical;min-height:90px}
   .hidden{display:none!important}
+  .muted{color:var(--muted)}
+  .err{color:var(--danger);margin-top:8px;min-height:18px;font-size:13px}
+  .spacer{flex:1}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
   /* login */
   #login{min-height:100vh;display:grid;place-items:center;padding:16px}
   .login-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px;width:100%;max-width:380px}
   .login-card h1{margin:0 0 4px;font-size:20px}
   .login-card p{margin:0 0 18px;color:var(--muted)}
-  .login-card label{display:block;margin:12px 0 4px;font-weight:600;font-size:13px}
-  .err{color:var(--danger);margin-top:10px;min-height:18px}
-  /* app */
-  header{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  header h1{font-size:17px;margin:0;color:var(--brand)}
-  header .spacer{flex:1}
-  header .who{color:var(--muted);font-size:13px}
-  main{padding:16px 20px;max-width:1300px;margin:0 auto}
+  label{display:block;margin:12px 0 4px;font-weight:600;font-size:13px}
+  /* shell */
+  #app{display:flex;min-height:100vh}
+  aside{width:220px;background:var(--side);color:#cfd8dc;padding:18px 12px;display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+  aside .brand{color:#fff;font-weight:700;font-size:16px;padding:6px 10px 16px}
+  aside .brand small{display:block;font-weight:400;color:#8696a0;font-size:12px}
+  aside button.nav{background:none;border:0;color:#cfd8dc;text-align:left;padding:10px 12px;border-radius:8px;display:flex;align-items:center;gap:10px;font-size:14px}
+  aside button.nav:hover{background:#1f2c34}
+  aside button.nav.active{background:var(--brand);color:#fff}
+  aside .badge{margin-left:auto;background:#25d366;color:#0b141a;border-radius:999px;font-size:11px;padding:1px 7px;font-weight:700}
+  aside .foot{margin-top:auto;padding:10px;font-size:12px;color:#8696a0;word-break:break-all}
+  aside .foot button{width:100%;margin-top:8px;background:#1f2c34;border-color:#2a3942;color:#cfd8dc}
+  main{flex:1;padding:20px 24px;max-width:1400px;min-width:0}
+  main h2{margin:0 0 14px;font-size:20px}
   .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
   .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:130px}
   .stat b{display:block;font-size:20px}
@@ -40,30 +53,55 @@
   .toolbar select{width:auto}
   .bulk{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
   .tablewrap{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:auto}
-  table{border-collapse:collapse;width:100%;min-width:760px}
+  table{border-collapse:collapse;width:100%;min-width:720px}
   th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle;white-space:nowrap}
   th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:#fafafa;position:sticky;top:0}
   tr:hover td{background:#fafcfc}
   .chip{display:inline-block;background:var(--chip);color:var(--brand-dk);border-radius:999px;padding:2px 8px;font-size:12px;margin:1px 3px 1px 0}
   .chip button{border:0;background:none;padding:0 0 0 4px;color:inherit;font-size:12px;line-height:1}
-  .status{font-size:12px;border-radius:999px;padding:2px 8px;background:#f3f4f6;color:#374151}
-  .status.sent,.status.delivered,.status.read{background:#dcfce7;color:#166534}
-  .status.failed{background:#fee2e2;color:#991b1b}
+  .status{font-size:12px;border-radius:999px;padding:2px 8px;background:#f3f4f6;color:#374151;white-space:nowrap}
+  .status.sent,.status.delivered,.status.read,.status.APPROVED,.status.completed,.status.received{background:#dcfce7;color:#166534}
+  .status.failed,.status.REJECTED{background:#fee2e2;color:#991b1b}
+  .status.PENDING,.status.running,.status.IN_APPEAL{background:#fef3c7;color:#92400e}
+  .status.paused,.status.PAUSED{background:#e5e7eb}
   .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:10px 0;color:var(--muted)}
   .empty{padding:40px;text-align:center;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .tpl{white-space:pre-wrap;background:#f9fafb;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;margin:8px 0;max-height:180px;overflow:auto}
+  .prog{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin:8px 0}
+  .prog i{display:block;height:100%;background:var(--brand);width:0;transition:width .3s}
+  /* inbox */
+  .inbox{display:flex;gap:0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;height:calc(100vh - 110px);min-height:480px}
+  .convs{width:300px;border-right:1px solid var(--line);overflow:auto;flex-shrink:0}
+  .conv{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:10px;align-items:center}
+  .conv:hover,.conv.active{background:#f0f7f5}
+  .conv .av{width:36px;height:36px;border-radius:50%;background:var(--chip);color:var(--brand-dk);display:grid;place-items:center;font-weight:700;flex-shrink:0}
+  .conv .meta{min-width:0;flex:1}
+  .conv .meta b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .conv .meta span{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .conv .unread{background:#25d366;color:#fff;border-radius:999px;font-size:11px;padding:1px 7px;font-weight:700}
+  .thread{flex:1;display:flex;flex-direction:column;min-width:0;background:#efeae2}
+  .thread header{background:#fff;border-bottom:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:10px}
+  .msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:6px}
+  .msg{max-width:70%;padding:8px 10px;border-radius:10px;background:#fff;font-size:13px;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+  .msg.out{align-self:flex-end;background:#d9fdd3}
+  .msg time{display:block;font-size:10px;color:var(--muted);text-align:right;margin-top:3px}
+  .compose{background:#fff;border-top:1px solid var(--line);padding:10px;display:flex;gap:8px;align-items:flex-end}
+  .compose textarea{min-height:40px;max-height:120px}
+  .note{background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:8px 12px;font-size:12px}
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;padding:16px;z-index:10}
-  .modal{background:#fff;border-radius:14px;padding:22px;width:100%;max-width:480px;max-height:90vh;overflow:auto}
-  .modal h2{margin:0 0 6px;font-size:17px}
-  .modal p{color:var(--muted);margin:0 0 14px}
-  .modal label{display:block;margin:10px 0 4px;font-weight:600;font-size:13px}
+  .modal{background:#fff;border-radius:14px;padding:22px;width:100%;max-width:520px;max-height:92vh;overflow:auto}
+  .modal h3{margin:0 0 6px;font-size:17px}
+  .modal p{color:var(--muted);margin:0 0 10px}
   .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
   .drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;color:var(--muted)}
   .drop.over{border-color:var(--brand);background:var(--chip)}
   pre.preview{background:#f9fafb;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;max-height:160px;overflow:auto;white-space:pre-wrap}
-  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.2s;pointer-events:none}
+  code.k{background:#f3f4f6;padding:2px 6px;border-radius:5px;font-size:12px;word-break:break-all}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:20;max-width:90vw}
   .toast.show{opacity:1}
-  @media (max-width:640px){main{padding:12px}.toolbar input[type=text]{width:100%}}
+  @media (max-width:760px){#app{flex-direction:column}aside{width:auto;flex-direction:row;flex-wrap:wrap;padding:10px}aside .brand{width:100%;padding-bottom:6px}aside .foot{display:none}main{padding:12px}.toolbar input[type=text]{width:100%}.convs{width:180px}}
 </style>
 </head>
 <body>
@@ -71,12 +109,10 @@
 <!-- LOGIN -->
 <section id="login">
   <form class="login-card" id="loginForm">
-    <h1>WhatsApp Contacts</h1>
-    <p>Sign in to manage the campaign list.</p>
-    <label>Email</label>
-    <input type="email" id="email" autocomplete="username" required>
-    <label>Password</label>
-    <input type="password" id="password" autocomplete="current-password" required>
+    <h1>Namo Padmavati · WhatsApp</h1>
+    <p>Sign in to manage contacts, campaigns and chats.</p>
+    <label>Email</label><input type="email" id="email" autocomplete="username" required>
+    <label>Password</label><input type="password" id="password" autocomplete="current-password" required>
     <div class="err" id="loginErr"></div>
     <button class="primary" style="width:100%" type="submit">Sign in</button>
   </form>
@@ -84,335 +120,451 @@
 
 <!-- APP -->
 <section id="app" class="hidden">
-  <header>
-    <h1>WhatsApp Contacts</h1>
-    <div class="spacer"></div>
-    <span class="who" id="who"></span>
-    <button id="logout">Sign out</button>
-  </header>
+  <aside>
+    <div class="brand">Namo Padmavati<small>WhatsApp platform</small></div>
+    <button class="nav active" data-view="contacts">👥 Contacts</button>
+    <button class="nav" data-view="campaigns">📣 Campaigns</button>
+    <button class="nav" data-view="templates">📄 Templates</button>
+    <button class="nav" data-view="inbox">💬 Inbox <span class="badge hidden" id="unreadBadge">0</span></button>
+    <button class="nav" data-view="settings">⚙️ Settings</button>
+    <div class="foot"><span id="who"></span><button id="logout">Sign out</button></div>
+  </aside>
   <main>
-    <div class="stats">
-      <div class="stat"><b id="stTotal">–</b><span>Total contacts</span></div>
-      <div class="stat"><b id="stSent">–</b><span>Sent (outreach1)</span></div>
-      <div class="stat"><b id="stFailed">–</b><span>Failed</span></div>
-      <div class="stat"><b id="stPending">–</b><span>Not yet sent</span></div>
+
+    <!-- CONTACTS -->
+    <div id="view-contacts">
+      <h2>Contacts</h2>
+      <div class="stats">
+        <div class="stat"><b id="stTotal">–</b><span>Total contacts</span></div>
+        <div class="stat"><b id="stReplied">–</b><span>Have replied</span></div>
+        <div class="stat"><b id="stTags">–</b><span>Tags</span></div>
+      </div>
+      <div class="toolbar">
+        <input type="text" id="search" placeholder="Search name or phone…">
+        <select id="tagFilter"><option value="">All tags</option></select>
+        <div class="spacer"></div>
+        <button id="btnAdd">+ Add contact</button>
+        <button id="btnUpload" class="primary">⬆ Upload CSV</button>
+        <button id="btnExport">Export CSV</button>
+        <button id="btnRefresh">↻</button>
+      </div>
+      <div class="bulk hidden" id="bulk">
+        <b><span id="selCount">0</span> selected</b>
+        <input type="text" id="bulkTag" placeholder="tag name" style="width:160px">
+        <button id="bulkAddTag">Add tag</button>
+        <button id="bulkRemoveTag">Remove tag</button>
+        <div class="spacer"></div>
+        <button id="bulkDelete" class="danger">Delete selected</button>
+        <button id="bulkClear">Clear</button>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th style="width:32px"><input type="checkbox" id="selAll"></th><th>Name</th><th>Phone</th><th>Tags</th><th>Last message</th><th>Added</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="empty hidden" id="empty">No contacts match.</div>
+      </div>
+      <div class="pager"><span id="pageInfo"></span><button id="prev">‹ Prev</button><button id="next">Next ›</button></div>
     </div>
 
-    <div class="toolbar">
-      <input type="text" id="search" placeholder="Search name or phone…">
-      <select id="tagFilter"><option value="">All tags</option></select>
-      <select id="statusFilter">
-        <option value="">Any status</option>
-        <option value="none">Not sent</option>
-        <option value="sent">Sent</option>
-        <option value="delivered">Delivered</option>
-        <option value="read">Read</option>
-        <option value="failed">Failed</option>
-      </select>
-      <div class="spacer" style="flex:1"></div>
-      <button id="btnAdd">+ Add contact</button>
-      <button id="btnUpload" class="primary">⬆ Upload CSV</button>
-      <button id="btnExport">Export CSV</button>
-      <button id="btnRefresh">↻</button>
+    <!-- CAMPAIGNS -->
+    <div id="view-campaigns" class="hidden">
+      <div class="row" style="margin-bottom:14px"><h2 style="margin:0">Campaigns</h2><div class="spacer"></div><button id="btnNewCampaign" class="primary">+ New campaign</button><button id="btnRefreshCampaigns">↻</button></div>
+      <div id="campaignList" class="grid"></div>
+      <div class="empty hidden" id="campaignEmpty">No campaigns yet. Create one to send a template to your contacts.</div>
     </div>
 
-    <div class="bulk hidden" id="bulk">
-      <b><span id="selCount">0</span> selected</b>
-      <input type="text" id="bulkTag" placeholder="tag name" style="width:160px">
-      <button id="bulkAddTag">Add tag</button>
-      <button id="bulkRemoveTag">Remove tag</button>
-      <div class="spacer" style="flex:1"></div>
-      <button id="bulkDelete" class="danger">Delete selected</button>
-      <button id="bulkClear">Clear</button>
+    <!-- TEMPLATES -->
+    <div id="view-templates" class="hidden">
+      <div class="row" style="margin-bottom:14px"><h2 style="margin:0">Message templates</h2><div class="spacer"></div><button id="btnNewTemplate" class="primary">+ Create template</button><button id="btnRefreshTemplates">↻</button></div>
+      <p class="muted" style="margin:0 0 12px">Templates are approved by Meta (usually within minutes to a few hours). Only <b>Approved</b> templates can be used in campaigns. Use <code class="k">{{1}}</code> in the body where the contact's name should go.</p>
+      <div id="templateList" class="grid"></div>
+      <div class="empty hidden" id="templateEmpty"></div>
     </div>
 
-    <div class="tablewrap">
-      <table>
-        <thead><tr>
-          <th style="width:32px"><input type="checkbox" id="selAll"></th>
-          <th>Name</th><th>Phone</th><th>Tags</th><th>Campaign status</th><th>Added</th><th></th>
-        </tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
-      <div class="empty hidden" id="empty">No contacts match.</div>
+    <!-- INBOX -->
+    <div id="view-inbox" class="hidden">
+      <div class="inbox">
+        <div class="convs" id="convs"></div>
+        <div class="thread" id="thread">
+          <div class="empty" style="margin:auto">Select a conversation</div>
+        </div>
+      </div>
     </div>
-    <div class="pager">
-      <span id="pageInfo"></span>
-      <button id="prev">‹ Prev</button>
-      <button id="next">Next ›</button>
+
+    <!-- SETTINGS -->
+    <div id="view-settings" class="hidden">
+      <h2>Settings & connection</h2>
+      <div class="card" id="setupCard">Loading…</div>
     </div>
   </main>
 </section>
 
-<!-- ADD / EDIT MODAL -->
-<div class="overlay hidden" id="editModal">
-  <form class="modal" id="editForm">
-    <h2 id="editTitle">Add contact</h2>
-    <p>Phone must include the country code, no + or spaces (e.g. 919876543210).</p>
-    <label>Name</label><input type="text" id="fName" required>
-    <label>Phone</label><input type="text" id="fPhone" required>
-    <label>Tags (comma separated)</label><input type="text" id="fTags" placeholder="vip, hyderabad">
-    <div class="err" id="editErr"></div>
-    <div class="actions"><button type="button" id="editCancel">Cancel</button><button class="primary" type="submit">Save</button></div>
-  </form>
-</div>
+<!-- ADD / EDIT CONTACT -->
+<div class="overlay hidden" id="editModal"><form class="modal" id="editForm">
+  <h3 id="editTitle">Add contact</h3><p>Phone must include the country code, no + or spaces (e.g. 919876543210).</p>
+  <label>Name</label><input type="text" id="fName" required>
+  <label>Phone</label><input type="text" id="fPhone" required>
+  <label>Tags (comma separated)</label><input type="text" id="fTags" placeholder="vip, hyderabad">
+  <div class="err" id="editErr"></div>
+  <div class="actions"><button type="button" id="editCancel">Cancel</button><button class="primary" type="submit">Save</button></div>
+</form></div>
 
-<!-- UPLOAD MODAL -->
-<div class="overlay hidden" id="uploadModal">
-  <div class="modal">
-    <h2>Upload contacts CSV</h2>
-    <p>Columns: <b>name, phone</b> and optionally <b>tags</b> (separate multiple tags with <code>;</code> or <code>|</code>). Existing phone numbers are updated, not duplicated.</p>
-    <div class="drop" id="drop">Drop a CSV here or <label style="color:var(--brand);cursor:pointer;text-decoration:underline">browse<input type="file" id="file" accept=".csv,text/csv" class="hidden"></label></div>
-    <label>Add this tag to every uploaded contact (optional)</label>
-    <input type="text" id="uploadTag" placeholder="e.g. sept-2026-list">
-    <pre class="preview hidden" id="preview"></pre>
-    <div class="err" id="uploadErr"></div>
-    <div class="actions"><button type="button" id="uploadCancel">Cancel</button><button class="primary" id="uploadGo" disabled>Import</button></div>
-  </div>
-</div>
+<!-- UPLOAD CSV -->
+<div class="overlay hidden" id="uploadModal"><div class="modal">
+  <h3>Upload contacts CSV</h3><p>Columns: <b>name, phone</b> and optionally <b>tags</b> (separate with <code class="k">;</code>). Existing numbers are updated, not duplicated.</p>
+  <div class="drop" id="drop">Drop a CSV here or <label style="display:inline;color:var(--brand);cursor:pointer;text-decoration:underline;font-weight:400">browse<input type="file" id="file" accept=".csv,text/csv" class="hidden"></label></div>
+  <label>Add this tag to every uploaded contact (optional)</label><input type="text" id="uploadTag" placeholder="e.g. sept-2026-list">
+  <pre class="preview hidden" id="preview"></pre>
+  <div class="err" id="uploadErr"></div>
+  <div class="actions"><button type="button" id="uploadCancel">Cancel</button><button class="primary" id="uploadGo" disabled>Import</button></div>
+</div></div>
+
+<!-- NEW CAMPAIGN -->
+<div class="overlay hidden" id="campaignModal"><form class="modal" id="campaignForm">
+  <h3>New campaign</h3><p>Sends one approved template to every contact in the audience. Each contact receives it once.</p>
+  <label>Campaign name</label><input type="text" id="cName" required placeholder="e.g. September outreach">
+  <label>Template</label><select id="cTemplate" required></select>
+  <div class="tpl hidden" id="cPreview"></div>
+  <label>Audience</label><select id="cTag"><option value="">All contacts</option></select>
+  <div class="muted" id="cCount" style="margin-top:6px"></div>
+  <div class="err" id="cErr"></div>
+  <div class="actions"><button type="button" id="cCancel">Cancel</button><button class="primary" type="submit">Create campaign</button></div>
+</form></div>
+
+<!-- NEW TEMPLATE -->
+<div class="overlay hidden" id="templateModal"><form class="modal" id="templateForm">
+  <h3>Create template</h3><p>Submitted to Meta for approval. Keep it clear and non-spammy; Marketing templates should include an opt-out line.</p>
+  <label>Name (lowercase, underscores)</label><input type="text" id="tName" required placeholder="outreach2">
+  <div class="row"><div style="flex:1"><label>Category</label><select id="tCategory"><option value="MARKETING">Marketing</option><option value="UTILITY">Utility</option></select></div>
+  <div style="flex:1"><label>Language</label><select id="tLang"><option value="en">English (en)</option><option value="en_US">English US (en_US)</option><option value="hi">Hindi (hi)</option><option value="te">Telugu (te)</option></select></div></div>
+  <label>Header (optional, text)</label><input type="text" id="tHeader" maxlength="60">
+  <label>Body</label><textarea id="tBody" required placeholder="Hi {{1}}, I'm Shikha Jain from Namo Padmavati…&#10;&#10;Reply STOP to opt out"></textarea>
+  <label>Footer (optional)</label><input type="text" id="tFooter" maxlength="60">
+  <label>Quick reply buttons (optional, comma separated, max 3)</label><input type="text" id="tButtons" placeholder="Yes, interested; Not now">
+  <div class="err" id="tErr"></div>
+  <div class="actions"><button type="button" id="tCancel">Cancel</button><button class="primary" type="submit">Submit for approval</button></div>
+</form></div>
 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 const SUPABASE_URL = 'https://gojwpibxsrmqpabhcdte.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_TfEo7DOf2wz1dqD83eZnxg_slkzMvxe'; // publishable key: safe in a browser, RLS restricts access to signed-in users
-const CAMPAIGN = 'outreach1';
+const SUPABASE_KEY = 'sb_publishable_TfEo7DOf2wz1dqD83eZnxg_slkzMvxe'; // publishable key; RLS limits access to signed-in users
 const PAGE = 100;
-
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = (id) => document.getElementById(id);
 
-let all = [];          // every contact (with latest status merged)
-let filtered = [];
-let page = 0;
-let selected = new Set();
-let editingId = null;
-let parsedRows = null;
+let session = null, all = [], filtered = [], page = 0, selected = new Set(), editingId = null, parsedRows = null;
+let templates = [], campaigns = [], activeConv = null, inboxTimer = null, runningLoops = {};
 
 // ---------- helpers ----------
-function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3200); }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function normPhone(p){ return String(p ?? '').replace(/[^\d]/g,''); }
 function parseTags(s){ return [...new Set(String(s ?? '').split(/[,;|]/).map(t=>t.trim().toLowerCase()).filter(Boolean))]; }
 function fmtDate(d){ return d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : ''; }
+function fmtTime(d){ return d ? new Date(d).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : ''; }
+function ago(d){ if(!d) return ''; const s=(Date.now()-new Date(d))/1000; if(s<60) return 'now'; if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }
+async function api(path, opts={}){
+  const r = await fetch(path, { ...opts, headers: { 'Content-Type':'application/json', Authorization: 'Bearer '+session.access_token, ...(opts.headers||{}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const data = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(data.error || `Request failed (${r.status})`);
+  return data;
+}
 
 // ---------- auth ----------
 $('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault(); $('loginErr').textContent='';
   const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
-  if (error) { $('loginErr').textContent = error.message; return; }
+  if (error) $('loginErr').textContent = error.message;
 });
 $('logout').addEventListener('click', () => sb.auth.signOut());
-sb.auth.onAuthStateChange((_evt, session) => {
-  if (session) { $('login').classList.add('hidden'); $('app').classList.remove('hidden'); $('who').textContent = session.user.email; load(); }
-  else { $('app').classList.add('hidden'); $('login').classList.remove('hidden'); }
+sb.auth.onAuthStateChange((_e, s) => {
+  session = s;
+  if (s) { $('login').classList.add('hidden'); $('app').classList.remove('hidden'); $('who').textContent = s.user.email; loadContacts(); refreshUnread(); }
+  else { $('app').classList.add('hidden'); $('login').classList.remove('hidden'); clearInterval(inboxTimer); }
 });
 
-// ---------- data ----------
+// ---------- navigation ----------
+document.querySelectorAll('button.nav').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+function showView(v){
+  document.querySelectorAll('button.nav').forEach(b => b.classList.toggle('active', b.dataset.view===v));
+  ['contacts','campaigns','templates','inbox','settings'].forEach(x => $('view-'+x).classList.toggle('hidden', x!==v));
+  clearInterval(inboxTimer);
+  if (v==='campaigns') loadCampaigns();
+  if (v==='templates') loadTemplates();
+  if (v==='inbox') { loadInbox(); inboxTimer = setInterval(loadInbox, 8000); }
+  if (v==='settings') loadSetup();
+}
+
+// ---------- data: contacts ----------
 async function fetchAll(table, select, order){
   const out=[]; let from=0;
   while(true){
     let q = sb.from(table).select(select).range(from, from+999);
-    if (order) q = q.order(order.col, {ascending: order.asc});
-    const { data, error } = await q;
-    if (error) throw error;
-    out.push(...data);
-    if (data.length < 1000) break;
-    from += 1000;
+    if (order) q = q.order(order.col, {ascending: order.asc, nullsFirst:false});
+    const { data, error } = await q; if (error) throw error;
+    out.push(...data); if (data.length < 1000) break; from += 1000;
   }
   return out;
 }
-
-async function load(){
+async function loadContacts(){
   try{
-    const [contacts, statuses] = await Promise.all([
-      fetchAll('contacts','id,name,phone,tags,created_at',{col:'created_at',asc:false}),
-      fetchAll('contact_latest_status','contact_id,campaign_name,status,sent_at,error_message')
-    ]);
-    const byId = Object.fromEntries(statuses.map(s=>[s.contact_id,s]));
-    all = contacts.map(c => ({...c, tags:c.tags||[], st: byId[c.id]||null}));
-    refreshTagFilter(); applyFilters(); updateStats();
+    all = (await fetchAll('contacts','id,name,phone,tags,created_at,last_inbound_at,last_message_at,unread_count',{col:'created_at',asc:false})).map(c=>({...c,tags:c.tags||[]}));
+    refreshTagFilter(); applyFilters();
+    $('stTotal').textContent = all.length;
+    $('stReplied').textContent = all.filter(c=>c.last_inbound_at).length;
+    $('stTags').textContent = new Set(all.flatMap(c=>c.tags)).size;
   }catch(err){ toast('Load failed: '+err.message); }
 }
-
-function updateStats(){
-  const cnt = (s)=>all.filter(c=>c.st && c.st.status===s).length;
-  $('stTotal').textContent = all.length;
-  $('stSent').textContent = cnt('sent')+cnt('delivered')+cnt('read');
-  $('stFailed').textContent = cnt('failed');
-  $('stPending').textContent = all.filter(c=>!c.st || c.st.status==='failed' || c.st.status==='pending').length;
-}
-
 function refreshTagFilter(){
   const tags=[...new Set(all.flatMap(c=>c.tags))].sort();
-  const sel=$('tagFilter'); const cur=sel.value;
-  sel.innerHTML='<option value="">All tags</option>'+tags.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
-  sel.value = tags.includes(cur)?cur:'';
+  for (const id of ['tagFilter','cTag']){ const sel=$(id); const cur=sel.value; const first = id==='tagFilter'?'All tags':'All contacts';
+    sel.innerHTML=`<option value="">${first}</option>`+tags.map(t=>`<option value="${esc(t)}">${esc(t)} (${all.filter(c=>c.tags.includes(t)).length})</option>`).join(''); sel.value = tags.includes(cur)?cur:''; }
 }
-
 function applyFilters(){
-  const q=$('search').value.trim().toLowerCase();
-  const tag=$('tagFilter').value; const st=$('statusFilter').value;
-  filtered = all.filter(c => {
-    if (q && !(c.name||'').toLowerCase().includes(q) && !c.phone.includes(q)) return false;
-    if (tag && !c.tags.includes(tag)) return false;
-    if (st==='none' && c.st && c.st.status!=='pending') return false;
-    if (st && st!=='none' && (!c.st || c.st.status!==st)) return false;
-    return true;
-  });
+  const q=$('search').value.trim().toLowerCase(), tag=$('tagFilter').value;
+  filtered = all.filter(c => (!q || (c.name||'').toLowerCase().includes(q) || c.phone.includes(q)) && (!tag || c.tags.includes(tag)));
   page=0; render();
 }
-
 function render(){
-  const start=page*PAGE, rows=filtered.slice(start,start+PAGE);
+  const rows=filtered.slice(page*PAGE,(page+1)*PAGE);
   $('rows').innerHTML = rows.map(c => `
     <tr data-id="${c.id}">
       <td><input type="checkbox" class="sel" ${selected.has(c.id)?'checked':''}></td>
-      <td>${esc(c.name)}</td>
-      <td>${esc(c.phone)}</td>
+      <td>${esc(c.name)}</td><td>${esc(c.phone)}</td>
       <td>${c.tags.map(t=>`<span class="chip">${esc(t)}<button title="remove tag" data-tag="${esc(t)}">×</button></span>`).join('')}</td>
-      <td>${c.st ? `<span class="status ${esc(c.st.status)}" title="${esc(c.st.error_message||'')}">${esc(c.st.status)}</span>` : '<span class="status">not sent</span>'}</td>
+      <td>${c.last_message_at ? `<span class="muted">${fmtTime(c.last_message_at)}</span>${c.last_inbound_at?' <span class="status received">replied</span>':''}` : '<span class="muted">—</span>'}</td>
       <td>${fmtDate(c.created_at)}</td>
-      <td><button class="edit">Edit</button> <button class="del danger">Delete</button></td>
+      <td><button class="sm chat">Chat</button> <button class="sm edit">Edit</button> <button class="sm del danger">Delete</button></td>
     </tr>`).join('');
   $('empty').classList.toggle('hidden', filtered.length>0);
   const pages=Math.max(1,Math.ceil(filtered.length/PAGE));
   $('pageInfo').textContent = `${filtered.length} contacts · page ${page+1} of ${pages}`;
   $('prev').disabled = page===0; $('next').disabled = page>=pages-1;
   $('selAll').checked = rows.length>0 && rows.every(c=>selected.has(c.id));
-  updateBulk();
+  $('bulk').classList.toggle('hidden', selected.size===0); $('selCount').textContent=selected.size;
 }
-function updateBulk(){ $('bulk').classList.toggle('hidden', selected.size===0); $('selCount').textContent=selected.size; }
-
-// ---------- table events ----------
 $('rows').addEventListener('click', async (e) => {
   const tr=e.target.closest('tr'); if(!tr) return; const id=tr.dataset.id; const c=all.find(x=>x.id===id);
-  if (e.target.classList.contains('sel')) { e.target.checked?selected.add(id):selected.delete(id); updateBulk(); return; }
-  if (e.target.classList.contains('edit')) { openEdit(c); return; }
+  if (e.target.classList.contains('sel')) { e.target.checked?selected.add(id):selected.delete(id); $('bulk').classList.toggle('hidden', selected.size===0); $('selCount').textContent=selected.size; return; }
+  if (e.target.classList.contains('edit')) return openEdit(c);
+  if (e.target.classList.contains('chat')) { showView('inbox'); openConv(c.id); return; }
   if (e.target.classList.contains('del')) { if(confirm(`Delete ${c.name} (${c.phone})?`)) await deleteIds([id]); return; }
-  if (e.target.dataset.tag) { await setTags(c, c.tags.filter(t=>t!==e.target.dataset.tag)); }
+  if (e.target.dataset.tag) await setTags(c, c.tags.filter(t=>t!==e.target.dataset.tag));
 });
 $('selAll').addEventListener('change', (e)=>{ filtered.slice(page*PAGE,(page+1)*PAGE).forEach(c=> e.target.checked?selected.add(c.id):selected.delete(c.id)); render(); });
-['search','tagFilter','statusFilter'].forEach(id=>$(id).addEventListener('input', applyFilters));
-$('prev').onclick=()=>{page--;render()}; $('next').onclick=()=>{page++;render()};
-$('btnRefresh').onclick=load;
-
-// ---------- mutations ----------
-async function setTags(c, tags){
-  const { error } = await sb.from('contacts').update({tags}).eq('id', c.id);
-  if (error) return toast(error.message);
-  c.tags=tags; refreshTagFilter(); render();
-}
+['search','tagFilter'].forEach(id=>$(id).addEventListener('input', applyFilters));
+$('prev').onclick=()=>{page--;render()}; $('next').onclick=()=>{page++;render()}; $('btnRefresh').onclick=loadContacts;
+async function setTags(c, tags){ const { error } = await sb.from('contacts').update({tags}).eq('id', c.id); if (error) return toast(error.message); c.tags=tags; refreshTagFilter(); render(); }
 async function deleteIds(ids){
-  for (let i=0;i<ids.length;i+=500){
-    const { error } = await sb.from('contacts').delete().in('id', ids.slice(i,i+500));
-    if (error) return toast(error.message);
-  }
-  ids.forEach(id=>selected.delete(id));
-  toast(`Deleted ${ids.length} contact${ids.length>1?'s':''}`); await load();
+  for (let i=0;i<ids.length;i+=500){ const { error } = await sb.from('contacts').delete().in('id', ids.slice(i,i+500)); if (error) return toast(error.message); }
+  ids.forEach(id=>selected.delete(id)); toast(`Deleted ${ids.length}`); await loadContacts();
 }
 async function bulkTag(add){
-  const tag=parseTags($('bulkTag').value)[0]; if(!tag) return toast('Enter a tag name');
-  const ids=[...selected]; let n=0;
-  for (const id of ids){
-    const c=all.find(x=>x.id===id); if(!c) continue;
-    const tags = add ? [...new Set([...c.tags, tag])] : c.tags.filter(t=>t!==tag);
-    if (tags.length===c.tags.length && add===c.tags.includes(tag)) continue;
-    const { error } = await sb.from('contacts').update({tags}).eq('id', id);
-    if (error) return toast(error.message);
-    c.tags=tags; n++;
-  }
+  const tag=parseTags($('bulkTag').value)[0]; if(!tag) return toast('Enter a tag name'); let n=0;
+  for (const id of [...selected]){ const c=all.find(x=>x.id===id); if(!c) continue;
+    const tags = add ? [...new Set([...c.tags, tag])] : c.tags.filter(t=>t!==tag); if (tags.length===c.tags.length) continue;
+    const { error } = await sb.from('contacts').update({tags}).eq('id', id); if (error) return toast(error.message); c.tags=tags; n++; }
   toast(`${add?'Added':'Removed'} "${tag}" on ${n} contacts`); refreshTagFilter(); render();
 }
-$('bulkAddTag').onclick=()=>bulkTag(true);
-$('bulkRemoveTag').onclick=()=>bulkTag(false);
+$('bulkAddTag').onclick=()=>bulkTag(true); $('bulkRemoveTag').onclick=()=>bulkTag(false);
 $('bulkDelete').onclick=async()=>{ if(confirm(`Delete ${selected.size} selected contacts? This cannot be undone.`)) await deleteIds([...selected]); };
 $('bulkClear').onclick=()=>{selected.clear();render();};
-
-// ---------- add / edit ----------
-function openEdit(c){
-  editingId = c?c.id:null;
-  $('editTitle').textContent = c?'Edit contact':'Add contact';
-  $('fName').value=c?c.name:''; $('fPhone').value=c?c.phone:''; $('fTags').value=c?c.tags.join(', '):'';
-  $('editErr').textContent=''; $('editModal').classList.remove('hidden'); $('fName').focus();
-}
-$('btnAdd').onclick=()=>openEdit(null);
-$('editCancel').onclick=()=>$('editModal').classList.add('hidden');
+function openEdit(c){ editingId=c?c.id:null; $('editTitle').textContent=c?'Edit contact':'Add contact'; $('fName').value=c?c.name:''; $('fPhone').value=c?c.phone:''; $('fTags').value=c?c.tags.join(', '):''; $('editErr').textContent=''; $('editModal').classList.remove('hidden'); $('fName').focus(); }
+$('btnAdd').onclick=()=>openEdit(null); $('editCancel').onclick=()=>$('editModal').classList.add('hidden');
 $('editForm').addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const row={ name:$('fName').value.trim(), phone:normPhone($('fPhone').value), tags:parseTags($('fTags').value) };
+  e.preventDefault(); const row={ name:$('fName').value.trim(), phone:normPhone($('fPhone').value), tags:parseTags($('fTags').value) };
   if (row.phone.length<10) { $('editErr').textContent='Phone looks too short — include the country code.'; return; }
-  const q = editingId ? sb.from('contacts').update(row).eq('id',editingId) : sb.from('contacts').insert(row);
-  const { error } = await q;
+  const { error } = await (editingId ? sb.from('contacts').update(row).eq('id',editingId) : sb.from('contacts').insert(row));
   if (error) { $('editErr').textContent = error.code==='23505' ? 'That phone number already exists.' : error.message; return; }
-  $('editModal').classList.add('hidden'); toast(editingId?'Contact updated':'Contact added'); await load();
+  $('editModal').classList.add('hidden'); toast(editingId?'Contact updated':'Contact added'); await loadContacts();
 });
-
-// ---------- CSV upload ----------
-function parseCSV(text){
-  const rows=[]; let row=[], field='', inQ=false;
-  for (let i=0;i<text.length;i++){
-    const ch=text[i];
-    if (inQ){ if(ch==='"'){ if(text[i+1]==='"'){field+='"';i++;} else inQ=false; } else field+=ch; }
-    else if (ch==='"') inQ=true;
-    else if (ch===',') { row.push(field); field=''; }
-    else if (ch==='\n' || ch==='\r') { if(ch==='\r'&&text[i+1]==='\n') i++; row.push(field); rows.push(row); row=[]; field=''; }
-    else field+=ch;
-  }
-  if (field!==''||row.length) { row.push(field); rows.push(row); }
-  return rows.filter(r=>r.some(x=>x.trim()!==''));
-}
-function handleFile(file){
-  const r=new FileReader();
-  r.onload=()=>{
-    const rows=parseCSV(r.result.replace(/^﻿/,''));
-    if (!rows.length) return $('uploadErr').textContent='File is empty.';
-    const header=rows[0].map(h=>h.trim().toLowerCase());
-    const iName=header.findIndex(h=>/name/.test(h)), iPhone=header.findIndex(h=>/phone|mobile|number|whatsapp/.test(h)), iTags=header.findIndex(h=>/tag/.test(h));
-    if (iPhone<0) return $('uploadErr').textContent='Could not find a phone column. Header should include "phone".';
-    const seen=new Set(); parsedRows=[]; let bad=0;
-    for (const r of rows.slice(1)){
-      const phone=normPhone(r[iPhone]); if(phone.length<10){bad++;continue;}
-      if (seen.has(phone)) continue; seen.add(phone);
-      parsedRows.push({ phone, name:(iName>=0?r[iName]:'').trim()||'Customer', tags: iTags>=0?parseTags(r[iTags]):[] });
-    }
-    $('uploadErr').textContent='';
-    $('preview').classList.remove('hidden');
-    $('preview').textContent = `${parsedRows.length} valid contacts found (${bad} skipped for bad phone, ${rows.length-1-parsedRows.length-bad} duplicates in file)\n\n` + parsedRows.slice(0,5).map(p=>`${p.name} — ${p.phone}${p.tags.length?' ['+p.tags.join(', ')+']':''}`).join('\n') + (parsedRows.length>5?'\n…':'');
-    $('uploadGo').disabled = parsedRows.length===0;
-  };
-  r.readAsText(file);
-}
+// CSV
+function parseCSV(text){ const rows=[]; let row=[], f='', inQ=false; for (let i=0;i<text.length;i++){ const ch=text[i];
+  if (inQ){ if(ch==='"'){ if(text[i+1]==='"'){f+='"';i++;} else inQ=false; } else f+=ch; }
+  else if (ch==='"') inQ=true; else if (ch===',') { row.push(f); f=''; }
+  else if (ch==='\n'||ch==='\r') { if(ch==='\r'&&text[i+1]==='\n') i++; row.push(f); rows.push(row); row=[]; f=''; } else f+=ch; }
+  if (f!==''||row.length) { row.push(f); rows.push(row); } return rows.filter(r=>r.some(x=>x.trim()!=='')); }
+function handleFile(file){ const r=new FileReader(); r.onload=()=>{
+  const rows=parseCSV(r.result.replace(/^﻿/,'')); if (!rows.length) return $('uploadErr').textContent='File is empty.';
+  const h=rows[0].map(x=>x.trim().toLowerCase()); const iN=h.findIndex(x=>/name/.test(x)), iP=h.findIndex(x=>/phone|mobile|number|whatsapp/.test(x)), iT=h.findIndex(x=>/tag/.test(x));
+  if (iP<0) return $('uploadErr').textContent='Could not find a phone column. Header should include "phone".';
+  const seen=new Set(); parsedRows=[]; let bad=0;
+  for (const row of rows.slice(1)){ const phone=normPhone(row[iP]); if(phone.length<10){bad++;continue;} if (seen.has(phone)) continue; seen.add(phone);
+    parsedRows.push({ phone, name:(iN>=0?row[iN]:'').trim()||'Customer', tags: iT>=0?parseTags(row[iT]):[] }); }
+  $('uploadErr').textContent=''; $('preview').classList.remove('hidden');
+  $('preview').textContent = `${parsedRows.length} valid contacts (${bad} skipped for bad phone, ${rows.length-1-parsedRows.length-bad} duplicates in file)\n\n` + parsedRows.slice(0,5).map(p=>`${p.name} — ${p.phone}${p.tags.length?' ['+p.tags.join(', ')+']':''}`).join('\n') + (parsedRows.length>5?'\n…':'');
+  $('uploadGo').disabled = parsedRows.length===0; }; r.readAsText(file); }
 $('btnUpload').onclick=()=>{ parsedRows=null; $('preview').classList.add('hidden'); $('uploadErr').textContent=''; $('uploadGo').disabled=true; $('file').value=''; $('uploadModal').classList.remove('hidden'); };
 $('uploadCancel').onclick=()=>$('uploadModal').classList.add('hidden');
 $('file').addEventListener('change', e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
-const drop=$('drop');
-drop.addEventListener('dragover', e=>{e.preventDefault();drop.classList.add('over')});
-drop.addEventListener('dragleave', ()=>drop.classList.remove('over'));
+const drop=$('drop'); drop.addEventListener('dragover', e=>{e.preventDefault();drop.classList.add('over')}); drop.addEventListener('dragleave', ()=>drop.classList.remove('over'));
 drop.addEventListener('drop', e=>{e.preventDefault();drop.classList.remove('over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);});
-$('uploadGo').onclick=async()=>{
-  if (!parsedRows) return;
-  const extra=parseTags($('uploadTag').value);
-  const existing = Object.fromEntries(all.map(c=>[c.phone,c]));
+$('uploadGo').onclick=async()=>{ if (!parsedRows) return; const extra=parseTags($('uploadTag').value); const existing=Object.fromEntries(all.map(c=>[c.phone,c]));
   const rows = parsedRows.map(p=>{ const old=existing[p.phone]; return { phone:p.phone, name:p.name, tags:[...new Set([...(old?old.tags:[]), ...p.tags, ...extra])] }; });
-  $('uploadGo').disabled=true; $('uploadGo').textContent='Importing…';
-  let done=0;
-  for (let i=0;i<rows.length;i+=500){
-    const { error } = await sb.from('contacts').upsert(rows.slice(i,i+500), { onConflict:'phone' });
+  $('uploadGo').disabled=true; let done=0;
+  for (let i=0;i<rows.length;i+=500){ const { error } = await sb.from('contacts').upsert(rows.slice(i,i+500), { onConflict:'phone' });
     if (error) { $('uploadErr').textContent=error.message; $('uploadGo').disabled=false; $('uploadGo').textContent='Import'; return; }
-    done+=Math.min(500,rows.length-i); $('uploadGo').textContent=`Importing… ${done}/${rows.length}`;
-  }
-  $('uploadGo').textContent='Import'; $('uploadModal').classList.add('hidden');
-  toast(`Imported ${rows.length} contacts`); await load();
-};
+    done+=Math.min(500,rows.length-i); $('uploadGo').textContent=`Importing… ${done}/${rows.length}`; }
+  $('uploadGo').textContent='Import'; $('uploadModal').classList.add('hidden'); toast(`Imported ${rows.length} contacts`); await loadContacts(); };
+$('btnExport').onclick=()=>{ const q=(s)=>`"${String(s??'').replace(/"/g,'""')}"`;
+  const csv=['name,phone,tags', ...filtered.map(c=>[q(c.name),q(c.phone),q(c.tags.join(';'))].join(','))].join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='contacts.csv'; a.click(); };
 
-// ---------- export ----------
-$('btnExport').onclick=()=>{
-  const q=(s)=>`"${String(s??'').replace(/"/g,'""')}"`;
-  const csv=['name,phone,tags,status', ...filtered.map(c=>[q(c.name),q(c.phone),q(c.tags.join(';')),q(c.st?c.st.status:'')].join(','))].join('\n');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='contacts.csv'; a.click();
-};
+// ---------- templates ----------
+async function loadTemplates(){
+  $('templateList').innerHTML='<div class="muted">Loading from Meta…</div>'; $('templateEmpty').classList.add('hidden');
+  try{ templates = (await api('/api/templates')).templates; renderTemplates(); }
+  catch(err){ templates=[]; $('templateList').innerHTML=''; $('templateEmpty').classList.remove('hidden'); $('templateEmpty').textContent='Could not load templates: '+err.message; }
+}
+function renderTemplates(){
+  $('templateList').innerHTML = templates.map(t=>`<div class="card">
+    <div class="row"><b>${esc(t.name)}</b><span class="status ${esc(t.status)}">${esc(t.status)}</span><span class="muted" style="font-size:12px">${esc(t.category)} · ${esc(t.language)}</span></div>
+    ${t.header?`<div style="font-weight:600;margin-top:8px">${esc(t.header)}</div>`:''}
+    <div class="tpl">${esc(t.body)}</div>
+    ${t.footer?`<div class="muted" style="font-size:12px">${esc(t.footer)}</div>`:''}
+    ${t.buttons.length?`<div class="row" style="margin-top:6px">${t.buttons.map(b=>`<span class="chip">${esc(b)}</span>`).join('')}</div>`:''}
+    ${t.rejected_reason&&t.rejected_reason!=='NONE'?`<div class="err">Rejected: ${esc(t.rejected_reason)}</div>`:''}
+    <div class="row" style="margin-top:10px"><span class="muted" style="font-size:12px">${t.body_params} variable${t.body_params===1?'':'s'}${t.quality?' · quality '+esc(t.quality):''}</span><div class="spacer"></div>
+      ${t.status==='APPROVED'?`<button class="sm useTpl" data-name="${esc(t.name)}">Use in campaign</button>`:''}</div>
+  </div>`).join('');
+  $('templateEmpty').classList.toggle('hidden', templates.length>0); if(!templates.length) $('templateEmpty').textContent='No templates yet.';
+}
+$('templateList').addEventListener('click', e=>{ if(e.target.classList.contains('useTpl')){ showView('campaigns'); openCampaignModal(e.target.dataset.name); } });
+$('btnRefreshTemplates').onclick=loadTemplates;
+$('btnNewTemplate').onclick=()=>{ $('templateForm').reset(); $('tErr').textContent=''; $('templateModal').classList.remove('hidden'); };
+$('tCancel').onclick=()=>$('templateModal').classList.add('hidden');
+$('templateForm').addEventListener('submit', async e=>{
+  e.preventDefault(); $('tErr').textContent='';
+  const body={ name:$('tName').value, category:$('tCategory').value, language:$('tLang').value, header:$('tHeader').value.trim()||null, body:$('tBody').value.trim(), footer:$('tFooter').value.trim()||null, quick_replies: $('tButtons').value.split(/[,;]/).map(s=>s.trim()).filter(Boolean) };
+  try{ const r=await api('/api/templates',{method:'POST',body}); $('templateModal').classList.add('hidden'); toast(`Template "${r.name}" submitted (status: ${r.status})`); loadTemplates(); }
+  catch(err){ $('tErr').textContent=err.message; }
+});
+
+// ---------- campaigns ----------
+async function loadCampaigns(){
+  try{
+    const [{ data: cs }, { data: stats }] = await Promise.all([ sb.from('campaigns').select('*').order('created_at',{ascending:false}), sb.from('campaign_stats').select('*') ]);
+    const byId=Object.fromEntries((stats||[]).map(s=>[s.campaign_id,s]));
+    campaigns=(cs||[]).map(c=>({...c, st: byId[c.id]||{sent:0,delivered:0,read:0,failed:0}}));
+    renderCampaigns();
+  }catch(err){ toast(err.message); }
+}
+function renderCampaigns(){
+  $('campaignEmpty').classList.toggle('hidden', campaigns.length>0);
+  $('campaignList').innerHTML = campaigns.map(c=>{ const st=c.st, done=Number(st.sent)+Number(st.failed), pct=c.total_targeted?Math.min(100,Math.round(done/c.total_targeted*100)):0; const running=!!runningLoops[c.id];
+    return `<div class="card" data-id="${c.id}">
+      <div class="row"><b>${esc(c.name)}</b><span class="status ${esc(c.status)}">${esc(c.status)}</span></div>
+      <div class="muted" style="font-size:12px;margin-top:4px">Template <b>${esc(c.template_name)}</b> · ${c.audience_tag?'tag "'+esc(c.audience_tag)+'"':'all contacts'} · ${c.total_targeted} targeted · ${fmtDate(c.created_at)}</div>
+      <div class="prog"><i style="width:${pct}%"></i></div>
+      <div class="row" style="font-size:12px"><span>${done}/${c.total_targeted} processed</span><span class="status sent">${st.sent} sent</span><span class="status delivered">${st.delivered} delivered</span><span class="status read">${st.read} read</span><span class="status failed">${st.failed} failed</span></div>
+      <div class="row" style="margin-top:10px">
+        ${c.status==='completed'?'':(running?`<button class="sm stop">⏸ Pause</button><span class="muted" style="font-size:12px">sending…</span>`:`<button class="sm primary start">▶ ${c.status==='draft'?'Start':'Resume'}</button>`)}
+        ${Number(st.failed)>0?`<button class="sm retry">Retry failed</button>`:''}
+        <button class="sm failures">View failures</button>
+        <div class="spacer"></div><button class="sm del danger">Delete</button>
+      </div></div>`; }).join('');
+}
+$('campaignList').addEventListener('click', async e=>{
+  const card=e.target.closest('.card'); if(!card) return; const id=card.dataset.id; const c=campaigns.find(x=>x.id===id);
+  if (e.target.classList.contains('start')) startLoop(id);
+  if (e.target.classList.contains('stop')) { runningLoops[id]=false; delete runningLoops[id]; await sb.from('campaigns').update({status:'paused'}).eq('id',id); loadCampaigns(); }
+  if (e.target.classList.contains('retry')) { await sb.from('campaign_log').delete().eq('campaign_id',id).eq('status','failed'); await sb.from('campaigns').update({status:'paused'}).eq('id',id); toast('Failed contacts will be retried when you resume'); loadCampaigns(); }
+  if (e.target.classList.contains('failures')) { const { data } = await sb.from('campaign_log').select('error_message,contacts(name,phone)').eq('campaign_id',id).eq('status','failed').limit(50);
+    alert(data&&data.length ? data.map(r=>`${r.contacts?.name||''} ${r.contacts?.phone||''}: ${r.error_message}`).join('\n') : 'No failures.'); }
+  if (e.target.classList.contains('del')) { if(!confirm(`Delete campaign "${c.name}" and its log?`)) return; runningLoops[id]=false; delete runningLoops[id]; await sb.from('campaigns').delete().eq('id',id); loadCampaigns(); }
+});
+async function startLoop(id){
+  if (runningLoops[id]) return; runningLoops[id]=true;
+  await sb.from('campaigns').update({status:'running'}).eq('id',id); renderCampaigns(); loadCampaigns();
+  while (runningLoops[id]) {
+    try {
+      const r = await api('/api/run-campaign',{method:'POST',body:{campaign_id:id}});
+      if (r.error && r.paused) toast('Paused: '+r.error);
+      await loadCampaigns();
+      if (r.done || r.paused) break;
+    } catch(err){ toast('Send error: '+err.message); break; }
+  }
+  delete runningLoops[id]; loadCampaigns();
+}
+$('btnRefreshCampaigns').onclick=loadCampaigns;
+$('btnNewCampaign').onclick=()=>openCampaignModal();
+$('cCancel').onclick=()=>$('campaignModal').classList.add('hidden');
+async function openCampaignModal(preset){
+  $('campaignForm').reset(); $('cErr').textContent=''; $('cPreview').classList.add('hidden'); $('campaignModal').classList.remove('hidden');
+  if (!all.length) await loadContacts(); refreshTagFilter(); updateAudienceCount();
+  $('cTemplate').innerHTML='<option>Loading templates…</option>';
+  try { if (!templates.length) templates=(await api('/api/templates')).templates; } catch(err){ $('cErr').textContent='Could not load templates: '+err.message; }
+  const ok=templates.filter(t=>t.status==='APPROVED');
+  $('cTemplate').innerHTML = ok.length ? ok.map(t=>`<option value="${esc(t.name)}|${esc(t.language)}">${esc(t.name)} (${esc(t.language)})</option>`).join('') : '<option value="">No approved templates</option>';
+  if (preset) { const t=ok.find(x=>x.name===preset); if(t) $('cTemplate').value=`${t.name}|${t.language}`; }
+  showTplPreview();
+}
+function showTplPreview(){ const [name]=($('cTemplate').value||'').split('|'); const t=templates.find(x=>x.name===name); $('cPreview').classList.toggle('hidden',!t); if(t) $('cPreview').textContent=t.body.replace('{{1}}','<name>'); }
+function updateAudienceCount(){ const tag=$('cTag').value; const n=all.filter(c=>!tag||c.tags.includes(tag)).length; $('cCount').textContent=`${n} contact${n===1?'':'s'} will receive this message.`; }
+$('cTemplate').addEventListener('change', showTplPreview); $('cTag').addEventListener('change', updateAudienceCount);
+$('campaignForm').addEventListener('submit', async e=>{
+  e.preventDefault(); $('cErr').textContent='';
+  const [template_name, template_language]=($('cTemplate').value||'').split('|'); if(!template_name) return $('cErr').textContent='Choose an approved template.';
+  const tag=$('cTag').value||null; const total=all.filter(c=>!tag||c.tags.includes(tag)).length; if(!total) return $('cErr').textContent='No contacts in this audience.';
+  const { error } = await sb.from('campaigns').insert({ name:$('cName').value.trim(), template_name, template_language, audience_tag:tag, total_targeted: total });
+  if (error) return $('cErr').textContent=error.message;
+  $('campaignModal').classList.add('hidden'); toast('Campaign created — press Start when ready'); loadCampaigns();
+});
+
+// ---------- inbox ----------
+async function refreshUnread(){ const { data } = await sb.from('contacts').select('unread_count').gt('unread_count',0); const n=(data||[]).reduce((a,c)=>a+c.unread_count,0); $('unreadBadge').textContent=n; $('unreadBadge').classList.toggle('hidden',n===0); }
+async function loadInbox(){
+  const { data } = await sb.from('contacts').select('id,name,phone,last_message_at,last_inbound_at,unread_count').not('last_message_at','is',null).order('last_message_at',{ascending:false}).limit(200);
+  const convs=data||[];
+  $('convs').innerHTML = convs.length ? convs.map(c=>`<div class="conv ${activeConv===c.id?'active':''}" data-id="${c.id}"><div class="av">${esc((c.name||'?')[0].toUpperCase())}</div><div class="meta"><b>${esc(c.name)}</b><span>${esc(c.phone)} · ${ago(c.last_message_at)}</span></div>${c.unread_count?`<span class="unread">${c.unread_count}</span>`:''}</div>`).join('') : '<div class="empty">No conversations yet.<br><small>Replies from contacts appear here once the webhook is connected.</small></div>';
+  refreshUnread(); if (activeConv) loadThread(activeConv, true);
+}
+$('convs').addEventListener('click', e=>{ const el=e.target.closest('.conv'); if(el) openConv(el.dataset.id); });
+async function openConv(id){ activeConv=id; document.querySelectorAll('.conv').forEach(el=>el.classList.toggle('active',el.dataset.id===id)); await sb.from('contacts').update({unread_count:0}).eq('id',id); loadThread(id); refreshUnread(); }
+async function loadThread(id, quiet){
+  const [{ data: c }, { data: msgs }] = await Promise.all([ sb.from('contacts').select('*').eq('id',id).single(), sb.from('messages').select('*').eq('contact_id',id).order('sent_at').limit(500) ]);
+  if (!c) return; const windowOpen = c.last_inbound_at && (Date.now()-new Date(c.last_inbound_at)) < 24*3600*1000;
+  const box=$('thread'); const wasBottom = !quiet || !box.querySelector('.msgs') || (box.querySelector('.msgs').scrollTop+box.querySelector('.msgs').clientHeight >= box.querySelector('.msgs').scrollHeight-40);
+  const draft = box.querySelector('#reply')?.value || '';
+  box.innerHTML = `<header><div class="av" style="width:34px;height:34px;border-radius:50%;background:var(--chip);color:var(--brand-dk);display:grid;place-items:center;font-weight:700">${esc((c.name||'?')[0].toUpperCase())}</div><div><b>${esc(c.name)}</b><div class="muted" style="font-size:12px">${esc(c.phone)}${(c.tags||[]).length?' · '+c.tags.map(esc).join(', '):''}</div></div><div class="spacer"></div><span class="muted" style="font-size:12px">${windowOpen?'✅ Reply window open':'⏱ 24h window closed — template only'}</span></header>
+    <div class="msgs" id="msgs">${(msgs||[]).map(m=>`<div class="msg ${m.direction}">${esc(m.body)}<time>${fmtTime(m.sent_at)}${m.direction==='out'?' · '+esc(m.status||''):''}</time></div>`).join('')||'<div class="empty">No messages yet.</div>'}</div>
+    ${windowOpen ? `<div class="compose"><textarea id="reply" placeholder="Type a reply…">${esc(draft)}</textarea><button class="primary" id="sendReply">Send</button></div>`
+      : `<div class="note">You can only send free-text replies within 24 hours of the contact's last message. Send an approved template instead:</div><div class="compose"><select id="replyTpl" style="flex:1"><option value="">Loading templates…</option></select><button class="primary" id="sendTpl">Send template</button></div>`}`;
+  const m=$('msgs'); if (wasBottom) m.scrollTop=m.scrollHeight;
+  if (windowOpen) { $('sendReply').onclick=async()=>{ const text=$('reply').value.trim(); if(!text) return; $('sendReply').disabled=true;
+      try{ await api('/api/send-message',{method:'POST',body:{contact_id:id,text}}); $('reply').value=''; await loadThread(id); }catch(err){ toast(err.message); $('sendReply').disabled=false; } };
+    $('reply').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); $('sendReply').click(); } }); }
+  else { try{ if(!templates.length) templates=(await api('/api/templates')).templates; }catch{}
+    const ok=templates.filter(t=>t.status==='APPROVED'); $('replyTpl').innerHTML = ok.length?ok.map(t=>`<option value="${esc(t.name)}|${esc(t.language)}">${esc(t.name)}</option>`).join(''):'<option value="">No approved templates</option>';
+    $('sendTpl').onclick=async()=>{ const [template,language]=($('replyTpl').value||'').split('|'); if(!template) return; $('sendTpl').disabled=true;
+      try{ await api('/api/send-message',{method:'POST',body:{contact_id:id,template,language}}); toast('Template sent'); await loadThread(id); }catch(err){ toast(err.message); $('sendTpl').disabled=false; } }; }
+}
+
+// ---------- settings ----------
+async function loadSetup(){
+  const card=$('setupCard'); card.innerHTML='Checking connection…';
+  try{
+    const s=await api('/api/setup');
+    const ok=(b)=>b?'<span class="status sent">set</span>':'<span class="status failed">missing</span>';
+    card.innerHTML=`
+      <h3 style="margin:0 0 8px">Meta connection</h3>
+      <div class="row" style="margin-bottom:6px">Access token ${ok(s.env.META_ACCESS_TOKEN)} Phone number ID ${ok(s.env.META_PHONE_NUMBER_ID)} WABA ID ${ok(s.env.META_WABA_ID)} Webhook token ${ok(s.env.META_WEBHOOK_VERIFY_TOKEN)}</div>
+      ${s.phone?`<div class="muted">Sending from <b>${esc(s.phone.display_phone_number)}</b> (${esc(s.phone.verified_name)}) · quality ${esc(s.phone.quality_rating)} · limit tier ${esc(s.phone.messaging_limit_tier||'—')}</div>`:''}
+      ${s.phoneError?`<div class="err">Phone check failed: ${esc(s.phoneError)}</div>`:''}
+      <h3 style="margin:18px 0 8px">Webhook (replies & delivery receipts)</h3>
+      <p class="muted" style="margin:0 0 8px">In <a href="https://developers.facebook.com/apps/1747765704025570/whatsapp-business/wa-settings/" target="_blank">Meta app → WhatsApp → Configuration</a>, set the callback URL and verify token below, then subscribe to the <b>messages</b> field. After that click "Subscribe app" here.</p>
+      <div class="row" style="margin-bottom:6px"><span style="width:110px">Callback URL</span><code class="k">${esc(s.webhookUrl)}</code></div>
+      <div class="row" style="margin-bottom:10px"><span style="width:110px">Verify token</span><code class="k">${esc(s.verifyToken||'(not set)')}</code></div>
+      <div class="row"><button id="btnSubscribe" class="primary">Subscribe app to WhatsApp account</button><span class="muted">Currently subscribed: ${s.subscribedApps?(s.subscribedApps.length?s.subscribedApps.map(esc).join(', '):'none'):(s.subscribeError?esc(s.subscribeError):'unknown')}</span></div>
+      <h3 style="margin:18px 0 8px">Manual trigger URL</h3>
+      <p class="muted" style="margin:0">Visiting <code class="k">${location.origin}/api/send-campaign?secret=…</code> sends the next batch of the oldest running campaign (useful for cron). The dashboard's Start button does this automatically.</p>`;
+    $('btnSubscribe').onclick=async()=>{ try{ await api('/api/setup',{method:'POST'}); toast('Subscribed'); loadSetup(); }catch(err){ toast(err.message); } };
+  }catch(err){ card.innerHTML=`<div class="err">${esc(err.message)}</div>`; }
+}
 </script>
 </body>
 </html>

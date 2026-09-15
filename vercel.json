@@ -1,8 +1,5 @@
 {
-  "crons": [
-    {
-      "path": "/api/send-campaign?secret=YOUR_SECRET_HERE",
-      "schedule": "0 9 * * *"
-    }
-  ]
+  "functions": {
+    "api/*.js": { "maxDuration": 60 }
+  }
 }
