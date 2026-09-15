@@ -10,9 +10,14 @@ export default async function handler(req, res) {
   const out = { wabaId: waba };
   // 1. Account + funding state
   try {
-    out.account = await graph(`${waba}?fields=name,currency,timezone_id,account_review_status,ownership_type,primary_funding_id,on_behalf_of_business_info,business_verification_status,is_enabled_for_insights`);
-    out.hasPaymentMethod = !!out.account.primary_funding_id;
+    out.account = await graph(`${waba}?fields=name,currency,timezone_id,account_review_status,ownership_type,business_verification_status`);
   } catch (e) { out.accountError = e.message; }
+  // Funding/payment-method fields are only exposed to solution providers, so probe it:
+  // a "primary_funding_id" read succeeds only when a payment method exists and we have access.
+  try {
+    const f = await graph(`${waba}?fields=primary_funding_id`);
+    out.hasPaymentMethod = !!f.primary_funding_id; out.fundingKnown = true;
+  } catch (e) { out.hasPaymentMethod = null; out.fundingKnown = false; out.fundingNote = e.message; }
 
   // 2. Spend analytics: try per-message pricing analytics first (current Meta model), then legacy conversation analytics
   const end = Math.floor(Date.now() / 1000);
@@ -30,7 +35,16 @@ export default async function handler(req, res) {
       const byCat = {};
       for (const d of pts) { const k = d.conversation_category || 'UNKNOWN'; byCat[k] = byCat[k] || { volume: 0, cost: 0 }; byCat[k].volume += d.conversation || 0; byCat[k].cost += d.cost || 0; }
       out.spend30d = { model: 'per_conversation', byCategory: byCat, total: Object.values(byCat).reduce((a, b) => a + b.cost, 0), volume: Object.values(byCat).reduce((a, b) => a + b.volume, 0) };
-    } catch (e2) { out.spendError = e1.message + ' / ' + e2.message; }
+    } catch (e2) {
+      // Last resort: plain message analytics (sent/delivered volumes, no cost)
+      try {
+        const m = await graph(`${waba}?fields=analytics.start(${start}).end(${end}).granularity(DAY)`);
+        const pts = m.analytics?.data_points || [];
+        const sent = pts.reduce((a, d) => a + (d.sent || 0), 0), delivered = pts.reduce((a, d) => a + (d.delivered || 0), 0);
+        out.spend30d = { model: 'volume_only', byCategory: { ALL_MESSAGES: { volume: sent, cost: null } }, total: null, volume: sent, delivered };
+        out.spendNote = 'Meta cost analytics are not available to this app; showing message volumes and platform estimates instead.';
+      } catch (e3) { out.spendError = e1.message + ' / ' + e2.message + ' / ' + e3.message; }
+    }
   }
 
   // 3. Phone limits
