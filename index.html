@@ -235,6 +235,11 @@
   <div class="tpl hidden" id="cPreview"></div>
   <label>Audience</label><select id="cTag"><option value="">All contacts</option></select>
   <div class="muted" id="cCount" style="margin-top:6px"></div>
+  <label>When to send</label>
+  <div class="row"><label style="margin:0;font-weight:400"><input type="radio" name="cWhen" value="manual" checked> Start manually</label>
+  <label style="margin:0;font-weight:400"><input type="radio" name="cWhen" value="schedule"> Schedule for</label>
+  <input type="datetime-local" id="cAt" style="width:auto" disabled></div>
+  <div class="muted" style="font-size:12px;margin-top:4px">Scheduled campaigns start on their own (checked every minute) — you don't need to keep this page open. Your daily limit is respected: if Meta stops accepting messages, the campaign pauses and resumes automatically 6 hours later.</div>
   <div class="err" id="cErr"></div>
   <div class="actions"><button type="button" id="cCancel">Cancel</button><button class="primary" type="submit">Create campaign</button></div>
 </form></div>
@@ -467,10 +472,15 @@ function renderCampaigns(){
     return `<div class="card" data-id="${c.id}">
       <div class="row"><b>${esc(c.name)}</b><span class="status ${esc(c.status)}">${esc(c.status)}</span></div>
       <div class="muted" style="font-size:12px;margin-top:4px">Template <b>${esc(c.template_name)}</b> · ${c.audience_tag?'tag "'+esc(c.audience_tag)+'"':'all contacts'} · ${c.total_targeted} targeted · ${fmtDate(c.created_at)}</div>
+      ${c.status==='scheduled'&&c.scheduled_at?`<div style="font-size:12px;margin-top:4px">⏰ ${c.last_error?esc(c.last_error):'Starts '+fmtTime(c.scheduled_at)}</div>`:''}
+      ${c.status==='paused'&&c.last_error?`<div class="err" style="margin-top:4px;min-height:0">Paused: ${esc(c.last_error)}</div>`:''}
       <div class="prog"><i style="width:${pct}%"></i></div>
       <div class="row" style="font-size:12px"><span>${done}/${c.total_targeted} processed</span><span class="status sent">${st.sent} sent</span><span class="status delivered">${st.delivered} delivered</span><span class="status read">${st.read} read</span><span class="status failed">${st.failed} failed</span></div>
       <div class="row" style="margin-top:10px">
-        ${c.status==='completed'?'':(running?`<button class="sm stop">⏸ Pause</button><span class="muted" style="font-size:12px">sending…</span>`:`<button class="sm primary start">▶ ${c.status==='draft'?'Start':'Resume'}</button>`)}
+        ${c.status==='completed'?'':(running?`<button class="sm stop">⏸ Pause</button><span class="muted" style="font-size:12px">sending…</span>`
+          : c.status==='scheduled'?`<button class="sm primary start">▶ Start now</button><button class="sm unschedule">Cancel schedule</button>`
+          : c.status==='running'?`<button class="sm primary start">▶ Continue</button><button class="sm stop">⏸ Pause</button><span class="muted" style="font-size:12px">runs in background</span>`
+          : `<button class="sm primary start">▶ ${c.status==='draft'?'Start':'Resume'}</button><button class="sm reschedule">⏰ Schedule</button>`)}
         ${Number(st.failed)>0?`<button class="sm retry">Retry failed</button>`:''}
         <button class="sm failures">View failures</button>
         <div class="spacer"></div><button class="sm del danger">Delete</button>
@@ -479,7 +489,9 @@ function renderCampaigns(){
 $('campaignList').addEventListener('click', async e=>{
   const card=e.target.closest('.card'); if(!card) return; const id=card.dataset.id; const c=campaigns.find(x=>x.id===id);
   if (e.target.classList.contains('start')) startLoop(id);
-  if (e.target.classList.contains('stop')) { runningLoops[id]=false; delete runningLoops[id]; await sb.from('campaigns').update({status:'paused'}).eq('id',id); loadCampaigns(); }
+  if (e.target.classList.contains('stop')) { runningLoops[id]=false; delete runningLoops[id]; await sb.from('campaigns').update({status:'paused',last_error:null}).eq('id',id); loadCampaigns(); }
+  if (e.target.classList.contains('unschedule')) { await sb.from('campaigns').update({status:'paused',scheduled_at:null,last_error:null}).eq('id',id); toast('Schedule cancelled'); loadCampaigns(); }
+  if (e.target.classList.contains('reschedule')) { const v=prompt('Start date & time (YYYY-MM-DD HH:MM, your local time):', new Date(Date.now()+3600000).toISOString().slice(0,16).replace('T',' ')); if(!v) return; const d=new Date(v.replace(' ','T')); if(isNaN(d)) return toast('Could not read that date'); await sb.from('campaigns').update({status:'scheduled',scheduled_at:d.toISOString(),last_error:null}).eq('id',id); toast('Scheduled for '+fmtTime(d)); loadCampaigns(); }
   if (e.target.classList.contains('retry')) { await sb.from('campaign_log').delete().eq('campaign_id',id).eq('status','failed'); await sb.from('campaigns').update({status:'paused'}).eq('id',id); toast('Failed contacts will be retried when you resume'); loadCampaigns(); }
   if (e.target.classList.contains('failures')) { const { data } = await sb.from('campaign_log').select('error_message,contacts(name,phone)').eq('campaign_id',id).eq('status','failed').limit(50);
     alert(data&&data.length ? data.map(r=>`${r.contacts?.name||''} ${r.contacts?.phone||''}: ${r.error_message}`).join('\n') : 'No failures.'); }
@@ -492,8 +504,9 @@ async function startLoop(id){
     try {
       const r = await api('/api/run-campaign',{method:'POST',body:{campaign_id:id}});
       if (r.error && r.paused) toast('Paused: '+r.error);
+      if (r.limit) toast('Daily messaging limit reached — campaign will resume automatically at '+fmtTime(r.scheduled_at));
       await loadCampaigns();
-      if (r.done || r.paused) break;
+      if (r.done || r.paused || r.scheduled) break;
     } catch(err){ toast('Send error: '+err.message); break; }
   }
   delete runningLoops[id]; loadCampaigns();
@@ -514,13 +527,16 @@ async function openCampaignModal(preset){
 function showTplPreview(){ const [name]=($('cTemplate').value||'').split('|'); const t=templates.find(x=>x.name===name); $('cPreview').classList.toggle('hidden',!t); if(t) $('cPreview').textContent=t.body.replace('{{1}}','<name>'); }
 function updateAudienceCount(){ const tag=$('cTag').value; const n=all.filter(c=>!tag||c.tags.includes(tag)).length; $('cCount').textContent=`${n} contact${n===1?'':'s'} will receive this message.`; }
 $('cTemplate').addEventListener('change', showTplPreview); $('cTag').addEventListener('change', updateAudienceCount);
+document.querySelectorAll('input[name=cWhen]').forEach(r=>r.addEventListener('change', ()=>{ const s=document.querySelector('input[name=cWhen]:checked').value==='schedule'; $('cAt').disabled=!s; if(s&&!$('cAt').value){ const d=new Date(Date.now()+3600000); d.setSeconds(0,0); $('cAt').value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16); } }));
 $('campaignForm').addEventListener('submit', async e=>{
   e.preventDefault(); $('cErr').textContent='';
   const [template_name, template_language]=($('cTemplate').value||'').split('|'); if(!template_name) return $('cErr').textContent='Choose an approved template.';
   const tag=$('cTag').value||null; const total=all.filter(c=>!tag||c.tags.includes(tag)).length; if(!total) return $('cErr').textContent='No contacts in this audience.';
-  const { error } = await sb.from('campaigns').insert({ name:$('cName').value.trim(), template_name, template_language, audience_tag:tag, total_targeted: total });
+  const when=document.querySelector('input[name=cWhen]:checked').value; let status='draft', scheduled_at=null;
+  if (when==='schedule'){ const v=$('cAt').value; if(!v) return $('cErr').textContent='Pick a date and time.'; const d=new Date(v); if(d.getTime()<Date.now()-60000) return $('cErr').textContent='That time is in the past.'; status='scheduled'; scheduled_at=d.toISOString(); }
+  const { error } = await sb.from('campaigns').insert({ name:$('cName').value.trim(), template_name, template_language, audience_tag:tag, total_targeted: total, status, scheduled_at });
   if (error) return $('cErr').textContent=error.message;
-  $('campaignModal').classList.add('hidden'); toast('Campaign created — press Start when ready'); loadCampaigns();
+  $('campaignModal').classList.add('hidden'); toast(status==='scheduled'?`Scheduled for ${fmtTime(scheduled_at)}`:'Campaign created — press Start when ready'); loadCampaigns();
 });
 
 // ---------- inbox ----------
