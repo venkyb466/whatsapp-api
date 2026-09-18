@@ -24,7 +24,22 @@ export async function runBatch(campaignId) {
     await db.from('campaigns').update({ status: 'running', started_at: campaign.started_at || new Date().toISOString(), last_error: null }).eq('id', campaignId);
   }
 
-  const { data: contacts, error: pErr } = await db.rpc('get_campaign_pending', { p_campaign_id: campaignId, p_limit: BATCH_SIZE });
+  // Daily cap (drip): count everything sent from this number in the trailing 24h, across all campaigns.
+  let batchLimit = BATCH_SIZE;
+  if (campaign.daily_limit && campaign.daily_limit > 0) {
+    const { data: win } = await db.rpc('sends_last_24h');
+    const used = win?.[0]?.sent_count || 0;
+    const remaining = campaign.daily_limit - used;
+    if (remaining <= 0) {
+      const oldest = win?.[0]?.oldest_sent_at ? new Date(win[0].oldest_sent_at) : new Date();
+      const resumeAt = new Date(oldest.getTime() + 24 * 3600 * 1000 + 60 * 1000).toISOString();
+      await db.from('campaigns').update({ status: 'scheduled', scheduled_at: resumeAt, last_error: `Daily limit of ${campaign.daily_limit} reached — resumes ${resumeAt}` }).eq('id', campaignId);
+      return { done: false, scheduled: true, scheduled_at: resumeAt, sent: 0, failed: 0, limit: true, daily: true };
+    }
+    batchLimit = Math.min(BATCH_SIZE, remaining);
+  }
+
+  const { data: contacts, error: pErr } = await db.rpc('get_campaign_pending', { p_campaign_id: campaignId, p_limit: batchLimit });
   if (pErr) return { error: pErr.message, status: 500 };
   if (!contacts || contacts.length === 0) {
     await db.from('campaigns').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', campaignId);
