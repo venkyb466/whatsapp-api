@@ -235,6 +235,8 @@
   <div class="tpl hidden" id="cPreview"></div>
   <label>Audience</label><select id="cTag"><option value="">All contacts</option></select>
   <div class="muted" id="cCount" style="margin-top:6px"></div>
+  <label>Messages per day (drip)</label>
+  <div class="row"><input type="number" id="cDaily" min="1" max="100000" value="250" style="width:120px"> <span class="muted" style="font-size:12px">Sends up to this many in any 24-hour window, then pauses and continues automatically the next day. Leave at or below your Meta limit (currently 250).</span></div>
   <label>When to send</label>
   <div class="row"><label style="margin:0;font-weight:400"><input type="radio" name="cWhen" value="manual" checked> Start manually</label>
   <label style="margin:0;font-weight:400"><input type="radio" name="cWhen" value="schedule"> Schedule for</label>
@@ -471,7 +473,7 @@ function renderCampaigns(){
   $('campaignList').innerHTML = campaigns.map(c=>{ const st=c.st, done=Number(st.sent)+Number(st.failed), pct=c.total_targeted?Math.min(100,Math.round(done/c.total_targeted*100)):0; const running=!!runningLoops[c.id];
     return `<div class="card" data-id="${c.id}">
       <div class="row"><b>${esc(c.name)}</b><span class="status ${esc(c.status)}">${esc(c.status)}</span></div>
-      <div class="muted" style="font-size:12px;margin-top:4px">Template <b>${esc(c.template_name)}</b> · ${c.audience_tag?'tag "'+esc(c.audience_tag)+'"':'all contacts'} · ${c.total_targeted} targeted · ${fmtDate(c.created_at)}</div>
+      <div class="muted" style="font-size:12px;margin-top:4px">Template <b>${esc(c.template_name)}</b> · ${c.audience_tag?'tag "'+esc(c.audience_tag)+'"':'all contacts'} · ${c.total_targeted} targeted · <a href="#" class="editDaily" style="color:var(--brand)">${c.daily_limit?c.daily_limit+'/day':'no daily cap'}</a> · ${fmtDate(c.created_at)}</div>
       ${c.status==='scheduled'&&c.scheduled_at?`<div style="font-size:12px;margin-top:4px">⏰ ${c.last_error?esc(c.last_error):'Starts '+fmtTime(c.scheduled_at)}</div>`:''}
       ${c.status==='paused'&&c.last_error?`<div class="err" style="margin-top:4px;min-height:0">Paused: ${esc(c.last_error)}</div>`:''}
       <div class="prog"><i style="width:${pct}%"></i></div>
@@ -490,6 +492,7 @@ $('campaignList').addEventListener('click', async e=>{
   const card=e.target.closest('.card'); if(!card) return; const id=card.dataset.id; const c=campaigns.find(x=>x.id===id);
   if (e.target.classList.contains('start')) startLoop(id);
   if (e.target.classList.contains('stop')) { runningLoops[id]=false; delete runningLoops[id]; await sb.from('campaigns').update({status:'paused',last_error:null}).eq('id',id); loadCampaigns(); }
+  if (e.target.classList.contains('editDaily')) { e.preventDefault(); const v=prompt('Messages per day for this campaign (leave empty for no cap):', c.daily_limit||''); if(v===null) return; const n=v.trim()===''?null:Math.max(1,parseInt(v,10)||0); if(v.trim()!==''&&!n) return toast('Enter a number'); await sb.from('campaigns').update({daily_limit:n}).eq('id',id); toast(n?`Daily limit set to ${n}`:'Daily cap removed'); loadCampaigns(); return; }
   if (e.target.classList.contains('unschedule')) { await sb.from('campaigns').update({status:'paused',scheduled_at:null,last_error:null}).eq('id',id); toast('Schedule cancelled'); loadCampaigns(); }
   if (e.target.classList.contains('reschedule')) { const v=prompt('Start date & time (YYYY-MM-DD HH:MM, your local time):', new Date(Date.now()+3600000).toISOString().slice(0,16).replace('T',' ')); if(!v) return; const d=new Date(v.replace(' ','T')); if(isNaN(d)) return toast('Could not read that date'); await sb.from('campaigns').update({status:'scheduled',scheduled_at:d.toISOString(),last_error:null}).eq('id',id); toast('Scheduled for '+fmtTime(d)); loadCampaigns(); }
   if (e.target.classList.contains('retry')) { await sb.from('campaign_log').delete().eq('campaign_id',id).eq('status','failed'); await sb.from('campaigns').update({status:'paused'}).eq('id',id); toast('Failed contacts will be retried when you resume'); loadCampaigns(); }
@@ -504,7 +507,7 @@ async function startLoop(id){
     try {
       const r = await api('/api/run-campaign',{method:'POST',body:{campaign_id:id}});
       if (r.error && r.paused) toast('Paused: '+r.error);
-      if (r.limit) toast('Daily messaging limit reached — campaign will resume automatically at '+fmtTime(r.scheduled_at));
+      if (r.limit) toast((r.daily?'Daily limit reached':'Meta messaging limit reached')+' — resumes automatically at '+fmtTime(r.scheduled_at));
       await loadCampaigns();
       if (r.done || r.paused || r.scheduled) break;
     } catch(err){ toast('Send error: '+err.message); break; }
@@ -534,7 +537,8 @@ $('campaignForm').addEventListener('submit', async e=>{
   const tag=$('cTag').value||null; const total=all.filter(c=>!tag||c.tags.includes(tag)).length; if(!total) return $('cErr').textContent='No contacts in this audience.';
   const when=document.querySelector('input[name=cWhen]:checked').value; let status='draft', scheduled_at=null;
   if (when==='schedule'){ const v=$('cAt').value; if(!v) return $('cErr').textContent='Pick a date and time.'; const d=new Date(v); if(d.getTime()<Date.now()-60000) return $('cErr').textContent='That time is in the past.'; status='scheduled'; scheduled_at=d.toISOString(); }
-  const { error } = await sb.from('campaigns').insert({ name:$('cName').value.trim(), template_name, template_language, audience_tag:tag, total_targeted: total, status, scheduled_at });
+  const daily_limit = Math.max(1, parseInt($('cDaily').value,10) || 250);
+  const { error } = await sb.from('campaigns').insert({ name:$('cName').value.trim(), template_name, template_language, audience_tag:tag, total_targeted: total, status, scheduled_at, daily_limit });
   if (error) return $('cErr').textContent=error.message;
   $('campaignModal').classList.add('hidden'); toast(status==='scheduled'?`Scheduled for ${fmtTime(scheduled_at)}`:'Campaign created — press Start when ready'); loadCampaigns();
 });
