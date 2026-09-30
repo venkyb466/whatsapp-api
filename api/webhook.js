@@ -1,7 +1,7 @@
 // Meta WhatsApp webhook.
 //   GET  -> verification handshake (Meta calls this once when you save the callback URL)
 //   POST -> incoming messages + delivery status updates
-import { db, json } from './_lib.js';
+import { db, json, storeInboundMedia } from './_lib.js';
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
@@ -60,9 +60,16 @@ async function handleInbound(m, waContacts) {
   }
   if (!contact) return;
 
-  await db.from('messages').upsert({
-    contact_id: contact.id, direction: 'in', wa_message_id: m.id, msg_type: m.type || 'text', body: describe(m), status: 'received', sent_at: ts,
-  }, { onConflict: 'wa_message_id', ignoreDuplicates: true });
+  const row = { contact_id: contact.id, direction: 'in', wa_message_id: m.id, msg_type: m.type || 'text', body: describe(m), status: 'received', sent_at: ts };
+  const media = m.image || m.video || m.audio || m.document || m.sticker;
+  if (media?.id) {
+    try {
+      const stored = await storeInboundMedia(media.id, { contactId: contact.id, messageId: m.id, filename: m.document?.filename });
+      row.media_url = stored.url; row.media_mime = stored.mime; row.media_name = stored.name;
+      row.body = media.caption || (m.type === 'document' ? (m.document?.filename || '') : '');
+    } catch (err) { console.error('media store failed', err); row.body = describe(m) + ' (could not download)'; }
+  }
+  await db.from('messages').upsert(row, { onConflict: 'wa_message_id', ignoreDuplicates: true });
 
   await db.from('contacts').update({
     last_inbound_at: ts, last_message_at: ts, unread_count: (contact.unread_count || 0) + 1,

@@ -78,4 +78,33 @@ export async function sendText(phone, text) {
   return data.messages?.[0]?.id || null;
 }
 
+// Send an image / video / audio / document by public URL (the file must be reachable by Meta's servers).
+export async function sendMedia(phone, kind, link, { caption, filename } = {}) {
+  requireMetaConfig();
+  const obj = { link };
+  if (caption && (kind === 'image' || kind === 'video' || kind === 'document')) obj.caption = caption;
+  if (filename && kind === 'document') obj.filename = filename;
+  const data = await graph(`${process.env.META_PHONE_NUMBER_ID}/messages`, {
+    method: 'POST',
+    body: { messaging_product: 'whatsapp', to: phone, type: kind, [kind]: obj },
+  });
+  return data.messages?.[0]?.id || null;
+}
+
+// Download an inbound media file from Meta and store it in the public "media" bucket. Returns { url, mime, name }.
+export async function storeInboundMedia(mediaId, { contactId, messageId, filename } = {}) {
+  const meta = await graph(`${mediaId}`); // { url, mime_type, file_size, ... }
+  const r = await fetch(meta.url, { headers: { Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}` } });
+  if (!r.ok) throw new Error(`Media download failed (${r.status})`);
+  const buf = Buffer.from(await r.arrayBuffer());
+  const mime = meta.mime_type || r.headers.get('content-type') || 'application/octet-stream';
+  const ext = (filename && filename.includes('.')) ? filename.split('.').pop() : (mimeExt[mime.split(';')[0]] || 'bin');
+  const path = `in/${contactId || 'unknown'}/${(messageId || mediaId).replace(/[^\w.-]/g, '_')}.${ext}`;
+  const { error } = await db.storage.from('media').upload(path, buf, { contentType: mime, upsert: true });
+  if (error) throw new Error(error.message);
+  const { data } = db.storage.from('media').getPublicUrl(path);
+  return { url: data.publicUrl, mime, name: filename || null };
+}
+const mimeExt = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/3gpp': '3gp', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/aac': 'aac', 'audio/amr': 'amr', 'application/pdf': 'pdf', 'text/plain': 'txt', 'application/msword': 'doc', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'application/vnd.ms-excel': 'xls', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx', 'application/vnd.ms-powerpoint': 'ppt', 'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx' };
+
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
