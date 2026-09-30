@@ -513,9 +513,20 @@ function showView(v){
   if (v==='billing') loadBilling();
   if (v==='campaigns') loadCampaigns();
   if (v==='templates') loadTemplates();
-  if (v==='inbox') { loadInbox(); inboxTimer = setInterval(loadInbox, 8000); }
+  if (v==='inbox') { loadInbox(); inboxTimer = setInterval(loadInbox, 15000); startRealtime(); warmSend(); }
   if (v==='settings') loadSetup();
 }
+// Realtime: new/updated messages push instantly instead of waiting for the poll.
+let rtChannel = null, rtDebounce = null;
+function startRealtime(){
+  if (rtChannel) return;
+  rtChannel = sb.channel('inbox-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => { clearTimeout(rtDebounce); rtDebounce = setTimeout(loadInbox, 250); })
+    .subscribe();
+}
+// Keep the send function warm so the first reply doesn't wait on a cold start.
+let warmTimer = null;
+function warmSend(){ const ping = () => fetch('/api/send-message', { method: 'OPTIONS' }).catch(()=>{}); ping(); clearInterval(warmTimer); warmTimer = setInterval(ping, 4*60*1000); }
 
 // ---------- data: contacts ----------
 async function fetchAll(table, select, order){
@@ -767,19 +778,39 @@ async function loadInbox(){
 }
 $('convs').addEventListener('click', e=>{ const el=e.target.closest('.conv'); if(el) openConv(el.dataset.id); });
 async function openConv(id){ activeConv=id; document.querySelectorAll('.conv').forEach(el=>el.classList.toggle('active',el.dataset.id===id)); await sb.from('contacts').update({unread_count:0}).eq('id',id); loadThread(id); refreshUnread(); }
+let threadKey = '', threadConv = null;
+function msgHtml(m){ return `<div class="msg ${m.direction}" data-id="${m.id}">${esc(m.body)}<time>${fmtTime(m.sent_at)}${m.direction==='out'?' · '+esc(m.status||''):''}</time></div>`; }
 async function loadThread(id, quiet){
   const [{ data: c }, { data: msgs }] = await Promise.all([ sb.from('contacts').select('*').eq('id',id).single(), sb.from('messages').select('*').eq('contact_id',id).order('sent_at').limit(500) ]);
-  if (!c) return; const windowOpen = c.last_inbound_at && (Date.now()-new Date(c.last_inbound_at)) < 24*3600*1000;
+  if (!c || activeConv!==id) return; const windowOpen = c.last_inbound_at && (Date.now()-new Date(c.last_inbound_at)) < 24*3600*1000;
   const box=$('thread'); const wasBottom = !quiet || !box.querySelector('.msgs') || (box.querySelector('.msgs').scrollTop+box.querySelector('.msgs').clientHeight >= box.querySelector('.msgs').scrollHeight-40);
+  const key = id+'|'+(windowOpen?1:0)+'|'+(msgs||[]).map(m=>m.id+':'+(m.status||'')).join(',');
+  // Quiet refresh (background poll): only touch the message list, never the compose box, and only if something changed.
+  if (quiet && threadConv===id && box.querySelector('#msgs') && box.querySelector('#reply, #replyTpl')) {
+    if (key===threadKey) return; threadKey=key;
+    const mm=$('msgs'); mm.querySelectorAll('.msg.pending, .msg.failed').forEach(b=>{ if(b.dataset.text && (msgs||[]).some(m=>m.direction==='out'&&m.body===b.dataset.text)) b.remove(); });
+    const pend=[...mm.querySelectorAll('.msg.pending, .msg.failed')];
+    mm.innerHTML=(msgs||[]).map(msgHtml).join('')||'<div class="empty">No messages yet.</div>'; pend.forEach(b=>mm.appendChild(b));
+    if (wasBottom) mm.scrollTop=mm.scrollHeight; return;
+  }
+  threadKey=key; threadConv=id;
   const draft = box.querySelector('#reply')?.value || '';
   box.innerHTML = `<header><div class="av" style="width:34px;height:34px;border-radius:50%;background:var(--chip);color:var(--brand-dk);display:grid;place-items:center;font-weight:700">${esc((c.name||'?')[0].toUpperCase())}</div><div><b>${esc(c.name)}</b><div class="muted" style="font-size:12px">${esc(c.phone)}${(c.tags||[]).length?' · '+c.tags.map(esc).join(', '):''}</div></div><div class="spacer"></div><span class="muted" style="font-size:12px">${windowOpen?'✅ Reply window open':'⏱ 24h window closed — template only'}</span></header>
-    <div class="msgs" id="msgs">${(msgs||[]).map(m=>`<div class="msg ${m.direction}">${esc(m.body)}<time>${fmtTime(m.sent_at)}${m.direction==='out'?' · '+esc(m.status||''):''}</time></div>`).join('')||'<div class="empty">No messages yet.</div>'}</div>
+    <div class="msgs" id="msgs">${(msgs||[]).map(msgHtml).join('')||'<div class="empty">No messages yet.</div>'}</div>
     ${windowOpen ? `<div class="compose"><textarea id="reply" placeholder="Type a reply…">${esc(draft)}</textarea><button class="primary" id="sendReply">Send</button></div>`
       : `<div class="note">You can only send free-text replies within 24 hours of the contact's last message. Send an approved template instead:</div><div class="compose"><select id="replyTpl" style="flex:1"><option value="">Loading templates…</option></select><button class="primary" id="sendTpl">Send template</button></div>`}`;
   const m=$('msgs'); if (wasBottom) m.scrollTop=m.scrollHeight;
-  if (windowOpen) { $('sendReply').onclick=async()=>{ const text=$('reply').value.trim(); if(!text) return; $('sendReply').disabled=true;
-      try{ await api('/api/send-message',{method:'POST',body:{contact_id:id,text}}); $('reply').value=''; await loadThread(id); }catch(err){ toast(err.message); $('sendReply').disabled=false; } };
-    $('reply').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); $('sendReply').click(); } }); }
+  if (windowOpen) { const doSend=()=>{ const ta=$('reply'); const text=ta.value.trim(); if(!text) return;
+      // Optimistic UI: show the bubble and clear the box immediately; the API call finishes in the background.
+      ta.value=''; ta.focus();
+      const mm=$('msgs'); mm.querySelector('.empty')?.remove();
+      const bubble=document.createElement('div'); bubble.className='msg out pending'; bubble.dataset.text=text; bubble.innerHTML=`${esc(text)}<time>sending…</time>`; mm.appendChild(bubble); mm.scrollTop=mm.scrollHeight;
+      api('/api/send-message',{method:'POST',body:{contact_id:id,text}})
+        .then(()=>{ bubble.classList.remove('pending'); bubble.querySelector('time').textContent=fmtTime(new Date().toISOString())+' · sent'; threadKey=''; loadThread(id,true); })
+        .catch(err=>{ bubble.classList.remove('pending'); bubble.classList.add('failed'); bubble.querySelector('time').textContent='failed — '+err.message; toast(err.message); if(!ta.value) ta.value=text; }); };
+    $('sendReply').addEventListener('pointerdown', e=>{ e.preventDefault(); doSend(); });
+    $('sendReply').addEventListener('click', e=>{ if(e.detail===0) doSend(); }); // keyboard activation only; pointer handled above
+    $('reply').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); doSend(); } }); }
   else { try{ if(!templates.length) templates=(await api('/api/templates')).templates; }catch{}
     const ok=templates.filter(t=>t.status==='APPROVED'); $('replyTpl').innerHTML = ok.length?ok.map(t=>`<option value="${esc(t.name)}|${esc(t.language)}">${esc(t.name)}</option>`).join(''):'<option value="">No approved templates</option>';
     $('sendTpl').onclick=async()=>{ const [template,language]=($('replyTpl').value||'').split('|'); if(!template) return; $('sendTpl').disabled=true;
