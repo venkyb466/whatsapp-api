@@ -5,103 +5,170 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Namo Padmavati · WhatsApp</title>
 <style>
-  :root{--bg:#f4f6f8;--card:#fff;--ink:#1a1d23;--muted:#6b7280;--line:#e5e7eb;--brand:#128c7e;--brand-dk:#0d6b60;--chip:#e6f4f1;--danger:#dc2626;--warn:#b45309;--side:#111b21}
-  *{box-sizing:border-box}
-  body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-  button,input,select,textarea{font:inherit}
-  button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;color:var(--ink)}
-  button:hover{background:#f3f4f6}
-  button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
-  button.primary:hover{background:var(--brand-dk)}
-  button.danger{color:var(--danger);border-color:#fecaca}
-  button.danger:hover{background:#fef2f2}
-  button.sm{padding:4px 9px;font-size:12px}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  input[type=text],input[type=email],input[type=password],select,textarea{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;width:100%}
-  textarea{resize:vertical;min-height:90px}
-  .hidden{display:none!important}
-  .muted{color:var(--muted)}
-  .err{color:var(--danger);margin-top:8px;min-height:18px;font-size:13px}
-  .spacer{flex:1}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
-  /* login */
-  #login{min-height:100vh;display:grid;place-items:center;padding:16px}
-  .login-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px;width:100%;max-width:380px}
-  .login-card h1{margin:0 0 4px;font-size:20px}
-  .login-card p{margin:0 0 18px;color:var(--muted)}
-  label{display:block;margin:12px 0 4px;font-weight:600;font-size:13px}
-  /* shell */
-  #app{display:flex;min-height:100vh}
-  aside{width:220px;background:var(--side);color:#cfd8dc;padding:18px 12px;display:flex;flex-direction:column;gap:4px;flex-shrink:0}
-  aside .brand{color:#fff;font-weight:700;font-size:16px;padding:6px 10px 16px}
-  aside .brand small{display:block;font-weight:400;color:#8696a0;font-size:12px}
-  aside button.nav{background:none;border:0;color:#cfd8dc;text-align:left;padding:10px 12px;border-radius:8px;display:flex;align-items:center;gap:10px;font-size:14px}
-  aside button.nav:hover{background:#1f2c34}
-  aside button.nav.active{background:var(--brand);color:#fff}
-  aside .badge{margin-left:auto;background:#25d366;color:#0b141a;border-radius:999px;font-size:11px;padding:1px 7px;font-weight:700}
-  aside .foot{margin-top:auto;padding:10px;font-size:12px;color:#8696a0;word-break:break-all}
-  aside .foot button{width:100%;margin-top:8px;background:#1f2c34;border-color:#2a3942;color:#cfd8dc}
-  main{flex:1;padding:20px 24px;max-width:1400px;min-width:0}
-  main h2{margin:0 0 14px;font-size:20px}
-  .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-  .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:130px}
-  .stat b{display:block;font-size:20px}
-  .stat span{color:var(--muted);font-size:12px}
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
-  .toolbar input[type=text]{width:240px}
-  .toolbar select{width:auto}
-  .bulk{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-  .tablewrap{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:auto}
-  table{border-collapse:collapse;width:100%;min-width:720px}
-  th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle;white-space:nowrap}
-  th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:#fafafa;position:sticky;top:0}
-  tr:hover td{background:#fafcfc}
-  .chip{display:inline-block;background:var(--chip);color:var(--brand-dk);border-radius:999px;padding:2px 8px;font-size:12px;margin:1px 3px 1px 0}
-  .chip button{border:0;background:none;padding:0 0 0 4px;color:inherit;font-size:12px;line-height:1}
-  .status{font-size:12px;border-radius:999px;padding:2px 8px;background:#f3f4f6;color:#374151;white-space:nowrap}
-  .status.sent,.status.delivered,.status.read,.status.APPROVED,.status.completed,.status.received{background:#dcfce7;color:#166534}
-  .status.failed,.status.REJECTED{background:#fee2e2;color:#991b1b}
-  .status.PENDING,.status.running,.status.IN_APPEAL{background:#fef3c7;color:#92400e}
-  .status.paused,.status.PAUSED{background:#e5e7eb}
-  .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:10px 0;color:var(--muted)}
-  .empty{padding:40px;text-align:center;color:var(--muted)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-  .tpl{white-space:pre-wrap;background:#f9fafb;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;margin:8px 0;max-height:180px;overflow:auto}
-  .prog{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin:8px 0}
-  .prog i{display:block;height:100%;background:var(--brand);width:0;transition:width .3s}
-  /* inbox */
-  .inbox{display:flex;gap:0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;height:calc(100vh - 110px);min-height:480px}
-  .convs{width:300px;border-right:1px solid var(--line);overflow:auto;flex-shrink:0}
-  .conv{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:10px;align-items:center}
-  .conv:hover,.conv.active{background:#f0f7f5}
-  .conv .av{width:36px;height:36px;border-radius:50%;background:var(--chip);color:var(--brand-dk);display:grid;place-items:center;font-weight:700;flex-shrink:0}
-  .conv .meta{min-width:0;flex:1}
-  .conv .meta b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .conv .meta span{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .conv .unread{background:#25d366;color:#fff;border-radius:999px;font-size:11px;padding:1px 7px;font-weight:700}
-  .thread{flex:1;display:flex;flex-direction:column;min-width:0;background:#efeae2}
-  .thread header{background:#fff;border-bottom:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:10px}
-  .msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:6px}
-  .msg{max-width:70%;padding:8px 10px;border-radius:10px;background:#fff;font-size:13px;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 0 rgba(0,0,0,.06)}
-  .msg.out{align-self:flex-end;background:#d9fdd3}
-  .msg time{display:block;font-size:10px;color:var(--muted);text-align:right;margin-top:3px}
-  .compose{background:#fff;border-top:1px solid var(--line);padding:10px;display:flex;gap:8px;align-items:flex-end}
-  .compose textarea{min-height:40px;max-height:120px}
-  .note{background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:8px 12px;font-size:12px}
-  /* modal */
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;padding:16px;z-index:10}
-  .modal{background:#fff;border-radius:14px;padding:22px;width:100%;max-width:520px;max-height:92vh;overflow:auto}
-  .modal h3{margin:0 0 6px;font-size:17px}
-  .modal p{color:var(--muted);margin:0 0 10px}
-  .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
-  .drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;color:var(--muted)}
-  .drop.over{border-color:var(--brand);background:var(--chip)}
-  pre.preview{background:#f9fafb;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;max-height:160px;overflow:auto;white-space:pre-wrap}
-  code.k{background:#f3f4f6;padding:2px 6px;border-radius:5px;font-size:12px;word-break:break-all}
-  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:20;max-width:90vw}
-  .toast.show{opacity:1}
-  @media (max-width:760px){#app{flex-direction:column}aside{width:auto;flex-direction:row;flex-wrap:wrap;padding:10px}aside .brand{width:100%;padding-bottom:6px}aside .foot{display:none}main{padding:12px}.toolbar input[type=text]{width:100%}.convs{width:180px}}
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --t-large-title: 700 34px/41px var(--font);
+  --t-title1: 400 28px/34px var(--font);
+  --t-title2: 400 22px/28px var(--font);
+  --t-title3: 400 20px/25px var(--font);
+  --t-headline: 600 17px/22px var(--font);
+  --t-body: 400 17px/22px var(--font);
+  --t-subhead: 400 15px/20px var(--font);
+  --t-footnote: 400 13px/18px var(--font);
+  --t-caption: 400 12px/16px var(--font);
+  --accent:#007AFF; --brand:#007AFF; --brand-dk:#0062CC; --green:#34C759; --red:#FF3B30; --orange:#FF9500; --indigo:#5856D6; --purple:#AF52DE; --pink:#FF2D55;
+  --gray:#8E8E93; --gray3:#C7C7CC; --gray5:#E5E5EA; --gray6:#F2F2F7;
+  --text:#000; --text-secondary:rgba(60,60,67,.6); --text-tertiary:rgba(60,60,67,.3); --separator:rgba(60,60,67,.29);
+  --muted:var(--text-secondary); --line:var(--separator); --surface:#FFF; --bg:#F2F2F7; --card:#FFF; --ink:#000; --danger:#FF3B30; --chip:var(--gray6);
+  --s-1:4px; --s-2:8px; --s-3:16px; --s-4:24px; --s-5:32px; --s-6:48px; --margin:16px; --row-h:44px;
+  --r-control:10px; --r-card:14px; --r-pill:999px;
+  --shadow:0 1px 3px rgba(0,0,0,.08);
+  --glass-bg:rgba(255,255,255,.65); --glass-blur:blur(20px) saturate(180%); --glass-border:1px solid rgba(255,255,255,.3); --glass-solid:#FFF;
+  --ease:cubic-bezier(.25,.1,.25,1); --dur:180ms;
+}
+@media (prefers-reduced-transparency: reduce){ :root{ --glass-bg:var(--glass-solid); --glass-blur:none; --glass-border:1px solid var(--gray5); } }
+
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font:var(--t-subhead);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:var(--gray6);color:var(--text);border-radius:var(--r-pill);height:36px;padding:0 var(--s-3);font:var(--t-subhead);font-weight:600;white-space:nowrap;transition:opacity var(--dur) var(--ease),background var(--dur) var(--ease);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button:hover{background:var(--gray5)}
+button:active{opacity:.7}
+button.primary{background:var(--accent);color:#fff}
+button.primary:hover{background:var(--brand-dk)}
+button.danger{background:none;color:var(--red)}
+button.danger:hover{background:rgba(255,59,48,.08)}
+button.sm{height:30px;padding:0 12px;font-size:13px}
+button:disabled{opacity:.4;cursor:not-allowed}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=datetime-local],select,textarea{border:0;border-radius:var(--r-control);padding:0 12px;height:36px;background:rgba(118,118,128,.12);width:100%;font:var(--t-body);font-size:15px;outline:0;color:var(--text)}
+input::placeholder,textarea::placeholder{color:var(--text-tertiary)}
+input:focus,select:focus,textarea:focus{background:rgba(118,118,128,.18)}
+textarea{padding:10px 12px;height:auto;min-height:96px;resize:vertical;line-height:1.4}
+select{appearance:none;-webkit-appearance:none;padding-right:32px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%238E8E93' stroke-width='1.8' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 12px center}
+input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(--accent);margin:0 4px 0 0;vertical-align:middle}
+label{display:block;margin:14px 0 6px;font:var(--t-footnote);font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
+label:has(input[type=radio]),label:has(input[type=checkbox]){display:inline-flex;align-items:center;gap:6px;margin:0;text-transform:none;letter-spacing:0;font:var(--t-subhead);color:var(--text)}
+.hidden{display:none!important}
+.muted{color:var(--text-secondary)}
+.err{color:var(--red);margin-top:8px;min-height:18px;font:var(--t-footnote)}
+.spacer{flex:1}
+.row{display:flex;gap:var(--s-2);align-items:center;flex-wrap:wrap}
+.card{background:var(--surface);border-radius:var(--r-card);padding:var(--s-3) var(--s-3) 14px}
+.card h3{margin:0 0 6px;font:var(--t-headline)}
+.card p{margin:0 0 10px;font:var(--t-subhead)}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code.k{background:var(--gray6);padding:2px 6px;border-radius:6px;font-size:12px;word-break:break-all}
+h2{font:var(--t-large-title);margin:0 0 var(--s-3);letter-spacing:.01em}
+h3{font:var(--t-headline)}
+
+/* login */
+#login{min-height:100vh;display:grid;place-items:center;padding:16px}
+.login-card{background:var(--surface);border-radius:var(--r-card);padding:var(--s-4);width:100%;max-width:380px}
+.login-card h1{margin:0 0 4px;font:var(--t-title2);font-weight:600}
+.login-card p{margin:0 0 6px;color:var(--text-secondary);font:var(--t-subhead)}
+.login-card button{width:100%;height:44px;margin-top:12px;font-size:17px}
+
+/* shell */
+#app{display:flex;min-height:100vh}
+aside{width:232px;flex-shrink:0;position:sticky;top:0;height:100vh;padding:var(--s-4) var(--s-2);display:flex;flex-direction:column;gap:var(--s-1);background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-right:var(--glass-border)}
+aside .brand{padding:0 var(--s-2) var(--s-4);font:var(--t-headline);color:var(--text)}
+aside .brand small{display:block;font:var(--t-footnote);color:var(--text-secondary);font-weight:400}
+aside button.nav{background:none;border-radius:var(--r-control);height:36px;padding:0 10px;font:var(--t-subhead);font-weight:500;color:var(--text);justify-content:flex-start;gap:10px;width:100%}
+aside button.nav:hover{background:rgba(0,0,0,.04)}
+aside button.nav.active{background:var(--accent);color:#fff}
+aside .ic{width:20px;text-align:center;font-size:15px;opacity:.9}
+aside .badge{margin-left:auto;font:600 12px/16px var(--font);background:var(--red);color:#fff;border-radius:var(--r-pill);padding:1px 7px}
+aside button.nav.active .badge{background:#fff;color:var(--accent)}
+aside .foot{margin-top:auto;padding:var(--s-2)}
+aside .foot span{display:block;font:var(--t-caption);color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:var(--s-2)}
+aside .foot button{width:100%;height:32px;font-size:13px}
+main{flex:1;min-width:0;padding:var(--s-6) var(--s-5) var(--s-6);max-width:1280px}
+
+/* stats & toolbar */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--s-3);margin:0 0 var(--s-4)}
+.stat{background:var(--surface);border-radius:var(--r-card);padding:var(--s-3) var(--s-3) 14px}
+.stat b{display:block;font:var(--t-title1);font-weight:600;letter-spacing:-.01em}
+.stat span{display:block;font:var(--t-footnote);color:var(--text-secondary);margin-top:2px}
+.toolbar{display:flex;gap:var(--s-2);align-items:center;flex-wrap:wrap;margin:0 0 var(--s-3)}
+.toolbar input[type=text]{width:260px}
+.toolbar select{width:auto}
+.bulk{position:fixed;left:50%;bottom:var(--s-4);transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:var(--s-2);padding:10px 12px 10px var(--s-3);border-radius:var(--r-pill);background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:var(--glass-border);box-shadow:var(--shadow);font:var(--t-subhead);font-weight:600}
+.bulk input{height:32px;border-radius:var(--r-pill)}
+.bulk button{height:30px;padding:0 12px;font-size:13px}
+.bulk .spacer{display:none}
+
+/* inset grouped list (table) */
+.tablewrap{background:var(--surface);border-radius:var(--r-card);overflow:auto}
+table{border-collapse:collapse;width:100%;min-width:720px}
+th{font:var(--t-footnote);color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;text-align:left;padding:12px 12px 8px;background:var(--surface);position:sticky;top:0;font-weight:400}
+td{padding:11px 12px;border-top:1px solid var(--separator);font:var(--t-subhead);vertical-align:middle;white-space:nowrap}
+tr:hover td{background:rgba(0,0,0,.02)}
+td button{height:28px;padding:0 8px;font-size:13px;background:none;color:var(--accent)}
+td:last-child{white-space:nowrap;width:1%;padding-right:var(--s-3)}
+td:first-child,th:first-child{padding-left:var(--s-3)}
+td button:hover{background:rgba(0,122,255,.08)}
+td button.danger{color:var(--red)}
+td button.danger:hover{background:rgba(255,59,48,.08)}
+.chip{display:inline-block;background:var(--gray6);color:var(--text-secondary);border-radius:var(--r-pill);padding:3px 10px;font:var(--t-footnote);margin:1px 4px 1px 0}
+.chip button{background:none;padding:0 0 0 4px;height:auto;font-size:12px;color:inherit;display:inline}
+.status{display:inline-block;font:var(--t-footnote);border-radius:var(--r-pill);padding:3px 10px;background:var(--gray6);color:var(--text-secondary);white-space:nowrap}
+.status.sent,.status.delivered,.status.read,.status.APPROVED,.status.completed,.status.received{background:rgba(52,199,89,.14);color:#1e7a35}
+.status.failed,.status.REJECTED{background:rgba(255,59,48,.12);color:#b3261e}
+.status.PENDING,.status.running,.status.IN_APPEAL,.status.scheduled{background:rgba(255,149,0,.14);color:#8a5200}
+.status.paused,.status.PAUSED{background:var(--gray5);color:var(--text-secondary)}
+.pager{display:flex;gap:var(--s-2);align-items:center;justify-content:flex-end;padding:var(--s-3) 0 0;font:var(--t-footnote);color:var(--text-secondary)}
+.pager button{height:30px;padding:0 12px;font-size:13px}
+.empty{padding:40px;text-align:center;color:var(--text-secondary);font:var(--t-subhead)}
+
+/* grids & cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--s-3)}
+.tpl{white-space:pre-wrap;background:var(--gray6);border-radius:var(--r-control);padding:10px 12px;font:var(--t-subhead);margin:8px 0;max-height:180px;overflow:auto}
+.prog{height:6px;background:var(--gray5);border-radius:var(--r-pill);overflow:hidden;margin:10px 0}
+.prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.card .row button.sm{height:30px}
+
+/* inbox */
+.inbox{display:flex;background:var(--surface);border-radius:var(--r-card);overflow:hidden;height:calc(100vh - 120px);min-height:480px}
+.convs{width:300px;border-right:1px solid var(--separator);overflow:auto;flex-shrink:0}
+.conv{padding:10px 12px;border-bottom:1px solid var(--separator);cursor:pointer;display:flex;gap:10px;align-items:center;transition:background var(--dur) var(--ease)}
+.conv:hover{background:rgba(0,0,0,.02)}
+.conv.active{background:rgba(0,122,255,.10)}
+.conv .av,.thread .av{width:40px;height:40px;border-radius:50%;background:var(--gray5);color:var(--text-secondary);display:grid;place-items:center;font:var(--t-headline);flex-shrink:0}
+.conv .meta{min-width:0;flex:1}
+.conv .meta b{display:block;font:var(--t-subhead);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv .meta span{display:block;color:var(--text-secondary);font:var(--t-footnote);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv .unread{background:var(--accent);color:#fff;border-radius:var(--r-pill);font:600 12px/16px var(--font);padding:1px 7px}
+.thread{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--gray6)}
+.thread header{background:var(--surface);border-bottom:1px solid var(--separator);padding:10px 14px;display:flex;align-items:center;gap:10px;font:var(--t-subhead)}
+.thread header b{font-weight:600}
+.msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:6px}
+.msg{max-width:70%;padding:8px 12px;border-radius:16px;background:var(--surface);font:var(--t-subhead);white-space:pre-wrap;word-break:break-word}
+.msg.out{align-self:flex-end;background:var(--accent);color:#fff}
+.msg time{display:block;font:var(--t-caption);opacity:.6;text-align:right;margin-top:3px}
+.compose{background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-top:var(--glass-border);padding:10px;display:flex;gap:8px;align-items:flex-end}
+.compose textarea{min-height:40px;max-height:120px;border-radius:18px;background:var(--surface)}
+.compose select{background-color:var(--surface)}
+.note{background:rgba(255,149,0,.12);color:#8a5200;padding:8px 14px;font:var(--t-footnote)}
+
+/* modals (sheets) */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);display:grid;place-items:center;padding:16px;z-index:10}
+.modal{background:var(--surface);border-radius:var(--r-card);padding:var(--s-4);width:100%;max-width:520px;max-height:92vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.modal h3{margin:0 0 4px;font:var(--t-title2);font-weight:600}
+.modal p{color:var(--text-secondary);margin:0 0 6px;font:var(--t-subhead)}
+.modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:var(--s-4)}
+.drop{border:2px dashed var(--gray3);border-radius:var(--r-control);padding:22px;text-align:center;color:var(--text-secondary);font:var(--t-subhead)}
+.drop.over{border-color:var(--accent);background:rgba(0,122,255,.06)}
+pre.preview{background:var(--gray6);border-radius:var(--r-control);padding:10px 12px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:180px;overflow:auto;white-space:pre-wrap;margin:10px 0 0}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(28,28,30,.92);color:#fff;padding:10px 16px;border-radius:var(--r-pill);font:var(--t-subhead);opacity:0;transition:.2s;pointer-events:none;z-index:20;max-width:90vw}
+.toast.show{opacity:1}
+
+/* settings migration card */
+#migrateCard label{margin:0;width:170px;text-transform:none;letter-spacing:0;font:var(--t-subhead);color:var(--text)}
+#migrateCard input{width:220px}
+
+@media (max-width:760px){#app{flex-direction:column}aside{width:auto;height:auto;position:static;flex-direction:row;flex-wrap:wrap;padding:var(--s-2)}aside .brand{width:100%;padding-bottom:6px}aside .foot{display:none}main{padding:var(--s-4) var(--margin)}.toolbar input[type=text]{width:100%}.convs{width:180px}.bulk{left:var(--margin);right:var(--margin);transform:none;border-radius:var(--r-card);flex-wrap:wrap}}
 </style>
 </head>
 <body>
@@ -109,7 +176,7 @@
 <!-- LOGIN -->
 <section id="login">
   <form class="login-card" id="loginForm">
-    <h1>Namo Padmavati · WhatsApp</h1>
+    <h1>Namo Padmavati</h1>
     <p>Sign in to manage contacts, campaigns and chats.</p>
     <label>Email</label><input type="email" id="email" autocomplete="username" required>
     <label>Password</label><input type="password" id="password" autocomplete="current-password" required>
@@ -121,13 +188,13 @@
 <!-- APP -->
 <section id="app" class="hidden">
   <aside>
-    <div class="brand">Namo Padmavati<small>WhatsApp platform</small></div>
-    <button class="nav active" data-view="contacts">👥 Contacts</button>
-    <button class="nav" data-view="campaigns">📣 Campaigns</button>
-    <button class="nav" data-view="templates">📄 Templates</button>
-    <button class="nav" data-view="inbox">💬 Inbox <span class="badge hidden" id="unreadBadge">0</span></button>
-    <button class="nav" data-view="billing">💳 Billing</button>
-    <button class="nav" data-view="settings">⚙️ Settings</button>
+    <div class="brand">Namo Padmavati<small>WhatsApp</small></div>
+    <button class="nav active" data-view="contacts"><span class="ic">👥</span>Contacts</button>
+    <button class="nav" data-view="campaigns"><span class="ic">📣</span>Campaigns</button>
+    <button class="nav" data-view="templates"><span class="ic">📄</span>Templates</button>
+    <button class="nav" data-view="inbox"><span class="ic">💬</span>Inbox<span class="badge hidden" id="unreadBadge">0</span></button>
+    <button class="nav" data-view="billing"><span class="ic">💳</span>Billing</button>
+    <button class="nav" data-view="settings"><span class="ic">⚙️</span>Settings</button>
     <div class="foot"><span id="who"></span><button id="logout">Sign out</button></div>
   </aside>
   <main>
@@ -144,10 +211,10 @@
         <input type="text" id="search" placeholder="Search name or phone…">
         <select id="tagFilter"><option value="">All tags</option></select>
         <div class="spacer"></div>
-        <button id="btnAdd">+ Add contact</button>
-        <button id="btnUpload" class="primary">⬆ Upload CSV</button>
-        <button id="btnExport">Export CSV</button>
-        <button id="btnRefresh">↻</button>
+        <button id="btnAdd">Add</button>
+        <button id="btnUpload" class="primary">Upload CSV</button>
+        <button id="btnExport">Export</button>
+        <button id="btnRefresh" title="Refresh">↻</button>
       </div>
       <div class="bulk hidden" id="bulk">
         <b><span id="selCount">0</span> selected</b>
@@ -156,7 +223,7 @@
         <button id="bulkRemoveTag">Remove tag</button>
         <div class="spacer"></div>
         <button id="bulkDelete" class="danger">Delete selected</button>
-        <button id="bulkClear">Clear</button>
+        <button id="bulkClear" style="background:none;color:var(--accent)">Done</button>
       </div>
       <div class="tablewrap">
         <table>
@@ -165,19 +232,19 @@
         </table>
         <div class="empty hidden" id="empty">No contacts match.</div>
       </div>
-      <div class="pager"><span id="pageInfo"></span><button id="prev">‹ Prev</button><button id="next">Next ›</button></div>
+      <div class="pager"><span id="pageInfo"></span><button id="prev">Previous</button><button id="next">Next</button></div>
     </div>
 
     <!-- CAMPAIGNS -->
     <div id="view-campaigns" class="hidden">
-      <div class="row" style="margin-bottom:14px"><h2 style="margin:0">Campaigns</h2><div class="spacer"></div><button id="btnNewCampaign" class="primary">+ New campaign</button><button id="btnRefreshCampaigns">↻</button></div>
+      <div class="row" style="margin-bottom:var(--s-3)"><h2 style="margin:0">Campaigns</h2><div class="spacer"></div><button id="btnNewCampaign" class="primary">New campaign</button><button id="btnRefreshCampaigns">↻</button></div>
       <div id="campaignList" class="grid"></div>
       <div class="empty hidden" id="campaignEmpty">No campaigns yet. Create one to send a template to your contacts.</div>
     </div>
 
     <!-- TEMPLATES -->
     <div id="view-templates" class="hidden">
-      <div class="row" style="margin-bottom:14px"><h2 style="margin:0">Message templates</h2><div class="spacer"></div><button id="btnNewTemplate" class="primary">+ Create template</button><button id="btnRefreshTemplates">↻</button></div>
+      <div class="row" style="margin-bottom:var(--s-3)"><h2 style="margin:0">Templates</h2><div class="spacer"></div><button id="btnNewTemplate" class="primary">Create template</button><button id="btnRefreshTemplates">↻</button></div>
       <p class="muted" style="margin:0 0 12px">Templates are approved by Meta (usually within minutes to a few hours). Only <b>Approved</b> templates can be used in campaigns. Use <code class="k">{{1}}</code> in the body where the contact's name should go.</p>
       <div id="templateList" class="grid"></div>
       <div class="empty hidden" id="templateEmpty"></div>
@@ -195,15 +262,15 @@
 
     <!-- BILLING -->
     <div id="view-billing" class="hidden">
-      <div class="row" style="margin-bottom:14px"><h2 style="margin:0">Billing</h2><div class="spacer"></div><button id="btnRefreshBilling">↻</button></div>
+      <div class="row" style="margin-bottom:var(--s-3)"><h2 style="margin:0">Billing</h2><div class="spacer"></div><button id="btnRefreshBilling">↻</button></div>
       <div id="billingBody">Loading…</div>
     </div>
 
     <!-- SETTINGS -->
     <div id="view-settings" class="hidden">
-      <h2>Settings & connection</h2>
+      <h2>Settings</h2>
       <div class="card" id="setupCard">Loading…</div>
-      <div class="card" style="margin-top:12px" id="migrateCard">
+      <div class="card" style="margin-top:var(--s-3)" id="migrateCard">
         <h3 style="margin:0 0 6px">Move phone number to another WhatsApp account</h3>
         <p class="muted" style="margin:0 0 10px">Migrates a number between two WhatsApp Business Accounts you own, keeping its display name, quality rating and messaging tier. Two-step verification must be off on the number first. Do the steps in order.</p>
         <div class="row" style="margin-bottom:8px"><label style="margin:0;width:170px">Destination WABA ID</label><input type="text" id="mWaba" style="width:220px" placeholder="e.g. 2649671488798752"></div>
@@ -362,7 +429,7 @@ function render(){
       <td><input type="checkbox" class="sel" ${selected.has(c.id)?'checked':''}></td>
       <td>${esc(c.name)}</td><td>${esc(c.phone)}</td>
       <td>${c.tags.map(t=>`<span class="chip">${esc(t)}<button title="remove tag" data-tag="${esc(t)}">×</button></span>`).join('')}</td>
-      <td>${c.last_message_at ? `<span class="muted">${fmtTime(c.last_message_at)}</span>${c.last_inbound_at?' <span class="status received">replied</span>':''}` : '<span class="muted">—</span>'}</td>
+      <td>${c.last_message_at ? `<span class="muted">${fmtTime(c.last_message_at)}</span>${c.last_inbound_at?' <span class="status received">Replied</span>':''}` : '<span class="muted">—</span>'}</td>
       <td>${fmtDate(c.created_at)}</td>
       <td><button class="sm chat">Chat</button> <button class="sm edit">Edit</button> <button class="sm del danger">Delete</button></td>
     </tr>`).join('');
@@ -485,15 +552,15 @@ function renderCampaigns(){
     return `<div class="card" data-id="${c.id}">
       <div class="row"><b>${esc(c.name)}</b><span class="status ${esc(c.status)}">${esc(c.status)}</span></div>
       <div class="muted" style="font-size:12px;margin-top:4px">Template <b>${esc(c.template_name)}</b> · ${c.audience_tag?'tag "'+esc(c.audience_tag)+'"':'all contacts'} · ${c.total_targeted} targeted · <a href="#" class="editDaily" style="color:var(--brand)">${c.daily_limit?c.daily_limit+'/day':'no daily cap'}</a> · ${fmtDate(c.created_at)}</div>
-      ${c.status==='scheduled'&&c.scheduled_at?`<div style="font-size:12px;margin-top:4px">⏰ ${c.last_error?esc(c.last_error):'Starts '+fmtTime(c.scheduled_at)}</div>`:''}
+      ${c.status==='scheduled'&&c.scheduled_at?`<div class="muted" style="font-size:13px;margin-top:4px">${c.last_error?esc(c.last_error):'Starts '+fmtTime(c.scheduled_at)}</div>`:''}
       ${c.status==='paused'&&c.last_error?`<div class="err" style="margin-top:4px;min-height:0">Paused: ${esc(c.last_error)}</div>`:''}
       <div class="prog"><i style="width:${pct}%"></i></div>
       <div class="row" style="font-size:12px"><span>${done}/${c.total_targeted} processed</span><span class="status sent">${st.sent} sent</span><span class="status delivered">${st.delivered} delivered</span><span class="status read">${st.read} read</span><span class="status failed">${st.failed} failed</span></div>
       <div class="row" style="margin-top:10px">
-        ${c.status==='completed'?'':(running?`<button class="sm stop">⏸ Pause</button><span class="muted" style="font-size:12px">sending…</span>`
-          : c.status==='scheduled'?`<button class="sm primary start">▶ Start now</button><button class="sm unschedule">Cancel schedule</button>`
-          : c.status==='running'?`<button class="sm primary start">▶ Continue</button><button class="sm stop">⏸ Pause</button><span class="muted" style="font-size:12px">runs in background</span>`
-          : `<button class="sm primary start">▶ ${c.status==='draft'?'Start':'Resume'}</button><button class="sm reschedule">⏰ Schedule</button>`)}
+        ${c.status==='completed'?'':(running?`<button class="sm stop">Pause</button><span class="muted" style="font-size:12px">sending…</span>`
+          : c.status==='scheduled'?`<button class="sm primary start">Start now</button><button class="sm unschedule">Cancel schedule</button>`
+          : c.status==='running'?`<button class="sm primary start">Continue</button><button class="sm stop">Pause</button><span class="muted" style="font-size:12px">runs in background</span>`
+          : `<button class="sm primary start">${c.status==='draft'?'Start':'Resume'}</button><button class="sm reschedule">Schedule</button>`)}
         ${Number(st.failed)>0?`<button class="sm retry">Retry failed</button>`:''}
         <button class="sm failures">View failures</button>
         <div class="spacer"></div><button class="sm del danger">Delete</button>
@@ -569,7 +636,7 @@ async function loadThread(id, quiet){
   if (!c) return; const windowOpen = c.last_inbound_at && (Date.now()-new Date(c.last_inbound_at)) < 24*3600*1000;
   const box=$('thread'); const wasBottom = !quiet || !box.querySelector('.msgs') || (box.querySelector('.msgs').scrollTop+box.querySelector('.msgs').clientHeight >= box.querySelector('.msgs').scrollHeight-40);
   const draft = box.querySelector('#reply')?.value || '';
-  box.innerHTML = `<header><div class="av" style="width:34px;height:34px;border-radius:50%;background:var(--chip);color:var(--brand-dk);display:grid;place-items:center;font-weight:700">${esc((c.name||'?')[0].toUpperCase())}</div><div><b>${esc(c.name)}</b><div class="muted" style="font-size:12px">${esc(c.phone)}${(c.tags||[]).length?' · '+c.tags.map(esc).join(', '):''}</div></div><div class="spacer"></div><span class="muted" style="font-size:12px">${windowOpen?'✅ Reply window open':'⏱ 24h window closed — template only'}</span></header>
+  box.innerHTML = `<header><div class="av">${esc((c.name||'?')[0].toUpperCase())}</div><div><b>${esc(c.name)}</b><div class="muted" style="font-size:12px">${esc(c.phone)}${(c.tags||[]).length?' · '+c.tags.map(esc).join(', '):''}</div></div><div class="spacer"></div><span class="muted" style="font-size:12px">${windowOpen?'✅ Reply window open':'⏱ 24h window closed — template only'}</span></header>
     <div class="msgs" id="msgs">${(msgs||[]).map(m=>`<div class="msg ${m.direction}">${esc(m.body)}<time>${fmtTime(m.sent_at)}${m.direction==='out'?' · '+esc(m.status||''):''}</time></div>`).join('')||'<div class="empty">No messages yet.</div>'}</div>
     ${windowOpen ? `<div class="compose"><textarea id="reply" placeholder="Type a reply…">${esc(draft)}</textarea><button class="primary" id="sendReply">Send</button></div>`
       : `<div class="note">You can only send free-text replies within 24 hours of the contact's last message. Send an approved template instead:</div><div class="compose"><select id="replyTpl" style="flex:1"><option value="">Loading templates…</option></select><button class="primary" id="sendTpl">Send template</button></div>`}`;
