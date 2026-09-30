@@ -40,6 +40,16 @@ export default async function handler(req, res) {
         const r = await graph(`${b.waba_id}/subscribed_apps`, { method: 'POST' });
         return json(res, 200, { ok: true, result: r });
       }
+      case 'list_numbers': {
+        if (!b.waba_id) return json(res, 400, { error: 'waba_id required' });
+        const r = await graph(`${b.waba_id}/phone_numbers?fields=id,display_phone_number,verified_name,status,platform_type,quality_rating`);
+        return json(res, 200, { ok: true, numbers: r.data || [] });
+      }
+      case 'delete_number': {
+        if (!b.phone_number_id) return json(res, 400, { error: 'phone_number_id required' });
+        const r = await graph(`${b.phone_number_id}`, { method: 'DELETE' });
+        return json(res, 200, { ok: true, result: r });
+      }
       case 'status': {
         if (!b.phone_number_id) return json(res, 400, { error: 'phone_number_id required' });
         const r = await graph(`${b.phone_number_id}?fields=id,display_phone_number,verified_name,status,code_verification_status,quality_rating,messaging_limit_tier,name_status,platform_type`);
