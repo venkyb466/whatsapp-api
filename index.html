@@ -158,6 +158,13 @@
   .msg time{display:block;font-size:10px;color:var(--muted);text-align:right;margin-top:3px}
   .compose{background:#fff;border-top:1px solid var(--line);padding:10px;display:flex;gap:8px;align-items:flex-end}
   .compose textarea{min-height:40px;max-height:120px}
+  .msg .media{display:block;max-width:100%;max-height:320px;border-radius:8px;margin-bottom:4px;object-fit:contain;background:#00000010}
+  .msg .doc,.attachbar .doc{display:inline-block;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,.06);color:inherit;text-decoration:none;font-weight:600;margin-bottom:4px}
+  .attachbar{background:#fff;border-top:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;gap:10px;font-size:13px}
+  .attachbar img{width:48px;height:48px;object-fit:cover;border-radius:6px}
+  .attachbar .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  html[data-theme=glass] .attachbar{background:rgba(15,20,26,.6);border-color:rgba(255,255,255,.1)}
+  html[data-theme=glass] .msg .doc{background:rgba(255,255,255,.12)}
   .note{background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:8px 12px;font-size:12px}
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(15,23,32,.4);display:grid;place-items:center;padding:16px;z-index:50}
@@ -779,7 +786,18 @@ async function loadInbox(){
 $('convs').addEventListener('click', e=>{ const el=e.target.closest('.conv'); if(el) openConv(el.dataset.id); });
 async function openConv(id){ activeConv=id; document.querySelectorAll('.conv').forEach(el=>el.classList.toggle('active',el.dataset.id===id)); await sb.from('contacts').update({unread_count:0}).eq('id',id); loadThread(id); refreshUnread(); }
 let threadKey = '', threadConv = null;
-function msgHtml(m){ return `<div class="msg ${m.direction}" data-id="${m.id}">${esc(m.body)}<time>${fmtTime(m.sent_at)}${m.direction==='out'?' · '+esc(m.status||''):''}</time></div>`; }
+function mediaHtml(url, mime, name){ if(!url) return ''; mime=mime||'';
+  if (mime.startsWith('image/')) return `<a href="${esc(url)}" target="_blank" rel="noopener"><img class="media" src="${esc(url)}" alt=""></a>`;
+  if (mime.startsWith('video/')) return `<video class="media" controls preload="metadata" src="${esc(url)}"></video>`;
+  if (mime.startsWith('audio/')) return `<audio controls preload="metadata" src="${esc(url)}" style="max-width:100%"></audio>`;
+  return `<a class="doc" href="${esc(url)}" target="_blank" rel="noopener">📄 ${esc(name||'Document')}</a>`; }
+function msgHtml(m){ return `<div class="msg ${m.direction}" data-id="${m.id}">${mediaHtml(m.media_url,m.media_mime,m.media_name)}${m.body?esc(m.body):''}<time>${fmtTime(m.sent_at)}${m.direction==='out'?' · '+esc(m.status||''):''}</time></div>`; }
+async function uploadMedia(file){
+  const ext=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,''); const path=`out/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+  const { error } = await sb.storage.from('media').upload(path, file, { contentType: file.type||'application/octet-stream', upsert:false });
+  if (error) throw new Error(error.message);
+  return { url: sb.storage.from('media').getPublicUrl(path).data.publicUrl, mime: file.type||'application/octet-stream', name: file.name };
+}
 async function loadThread(id, quiet){
   const [{ data: c }, { data: msgs }] = await Promise.all([ sb.from('contacts').select('*').eq('id',id).single(), sb.from('messages').select('*').eq('contact_id',id).order('sent_at').limit(500) ]);
   if (!c || activeConv!==id) return; const windowOpen = c.last_inbound_at && (Date.now()-new Date(c.last_inbound_at)) < 24*3600*1000;
@@ -797,15 +815,28 @@ async function loadThread(id, quiet){
   const draft = box.querySelector('#reply')?.value || '';
   box.innerHTML = `<header><div class="av" style="width:34px;height:34px;border-radius:50%;background:var(--chip);color:var(--brand-dk);display:grid;place-items:center;font-weight:700">${esc((c.name||'?')[0].toUpperCase())}</div><div><b>${esc(c.name)}</b><div class="muted" style="font-size:12px">${esc(c.phone)}${(c.tags||[]).length?' · '+c.tags.map(esc).join(', '):''}</div></div><div class="spacer"></div><span class="muted" style="font-size:12px">${windowOpen?'✅ Reply window open':'⏱ 24h window closed — template only'}</span></header>
     <div class="msgs" id="msgs">${(msgs||[]).map(msgHtml).join('')||'<div class="empty">No messages yet.</div>'}</div>
-    ${windowOpen ? `<div class="compose"><textarea id="reply" placeholder="Type a reply…">${esc(draft)}</textarea><button class="primary" id="sendReply">Send</button></div>`
+    ${windowOpen ? `<div class="attachbar hidden" id="attachBar"></div><div class="compose"><button class="icon" id="attachBtn" title="Attach image, video, audio or document">📎</button><input type="file" id="attachFile" class="hidden" accept="image/*,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"><textarea id="reply" placeholder="Type a reply…">${esc(draft)}</textarea><button class="primary" id="sendReply">Send</button></div>`
       : `<div class="note">You can only send free-text replies within 24 hours of the contact's last message. Send an approved template instead:</div><div class="compose"><select id="replyTpl" style="flex:1"><option value="">Loading templates…</option></select><button class="primary" id="sendTpl">Send template</button></div>`}`;
   const m=$('msgs'); if (wasBottom) m.scrollTop=m.scrollHeight;
-  if (windowOpen) { const doSend=()=>{ const ta=$('reply'); const text=ta.value.trim(); if(!text) return;
+  if (windowOpen) { let attached=null; // { file, previewUrl }
+    const showAttach=()=>{ const bar=$('attachBar'); if(!attached){ bar.classList.add('hidden'); bar.innerHTML=''; return; }
+      const f=attached.file; bar.classList.remove('hidden');
+      bar.innerHTML=`${f.type.startsWith('image/')?`<img src="${attached.previewUrl}" alt="">`:`<span class="doc">📄</span>`}<span class="nm">${esc(f.name)} <small class="muted">(${(f.size/1024/1024).toFixed(2)} MB)</small></span><button class="ghost sm" id="attachClear">✕</button>`;
+      $('attachClear').onclick=()=>{ attached=null; showAttach(); }; };
+    $('attachBtn').onclick=()=>$('attachFile').click();
+    $('attachFile').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return;
+      const max=f.type.startsWith('image/')?5:f.type.startsWith('video/')?16:f.type.startsWith('audio/')?16:100; if(f.size>max*1024*1024) return toast(`File too large — WhatsApp allows up to ${max} MB for this type`);
+      attached={file:f, previewUrl:f.type.startsWith('image/')?URL.createObjectURL(f):null}; showAttach(); $('reply').focus(); };
+    $('thread').ondragover=e=>{ e.preventDefault(); }; $('thread').ondrop=e=>{ e.preventDefault(); const f=e.dataTransfer.files[0]; if(f){ attached={file:f, previewUrl:f.type.startsWith('image/')?URL.createObjectURL(f):null}; showAttach(); } };
+    const doSend=()=>{ const ta=$('reply'); const text=ta.value.trim(); const att=attached; if(!text && !att) return;
       // Optimistic UI: show the bubble and clear the box immediately; the API call finishes in the background.
-      ta.value=''; ta.focus();
+      ta.value=''; ta.focus(); attached=null; showAttach();
       const mm=$('msgs'); mm.querySelector('.empty')?.remove();
-      const bubble=document.createElement('div'); bubble.className='msg out pending'; bubble.dataset.text=text; bubble.innerHTML=`${esc(text)}<time>sending…</time>`; mm.appendChild(bubble); mm.scrollTop=mm.scrollHeight;
-      api('/api/send-message',{method:'POST',body:{contact_id:id,text}})
+      const bubble=document.createElement('div'); bubble.className='msg out pending'; bubble.dataset.text=text;
+      bubble.innerHTML=`${att?(att.previewUrl?`<img class="media" src="${att.previewUrl}" alt="">`:`<span class="doc">📄 ${esc(att.file.name)}</span>`):''}${esc(text)}<time>${att?'uploading…':'sending…'}</time>`; mm.appendChild(bubble); mm.scrollTop=mm.scrollHeight;
+      (async()=>{ let body={contact_id:id,text};
+        if(att){ const up=await uploadMedia(att.file); body={...body, media_url:up.url, media_mime:up.mime, media_name:up.name}; bubble.querySelector('time').textContent='sending…'; }
+        await api('/api/send-message',{method:'POST',body}); })()
         .then(()=>{ bubble.classList.remove('pending'); bubble.querySelector('time').textContent=fmtTime(new Date().toISOString())+' · sent'; threadKey=''; loadThread(id,true); })
         .catch(err=>{ bubble.classList.remove('pending'); bubble.classList.add('failed'); bubble.querySelector('time').textContent='failed — '+err.message; toast(err.message); if(!ta.value) ta.value=text; }); };
     $('sendReply').addEventListener('pointerdown', e=>{ e.preventDefault(); doSend(); });
