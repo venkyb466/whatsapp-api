@@ -41,6 +41,11 @@ function describe(m) {
     case 'sticker': return '[sticker]';
     case 'location': return `[location] ${m.location?.latitude},${m.location?.longitude}`;
     case 'reaction': return `[reaction] ${m.reaction?.emoji || ''}`;
+    case 'contacts': return '[contact card] ' + (m.contacts || []).map((c) => c.name?.formatted_name || '').filter(Boolean).join(', ');
+    case 'unsupported': {
+      const e = m.errors?.[0];
+      return `⚠️ Message type not supported by WhatsApp API${e?.error_data?.details ? ' — ' + e.error_data.details : e?.title ? ' — ' + e.title : ''}. (Usually a poll, view-once photo/video, disappearing message, live location or event.) Ask the contact to resend as a normal message.`;
+    }
     default: return `[${m.type}]`;
   }
 }
@@ -61,6 +66,7 @@ async function handleInbound(m, waContacts) {
   if (!contact) return;
 
   const row = { contact_id: contact.id, direction: 'in', wa_message_id: m.id, msg_type: m.type || 'text', body: describe(m), status: 'received', sent_at: ts };
+  if (m.type === 'unsupported' || !['text', 'image', 'video', 'audio', 'document', 'sticker', 'button', 'interactive', 'reaction', 'location', 'contacts'].includes(m.type)) row.raw = m; // keep the payload so we can see what it was
   const media = m.image || m.video || m.audio || m.document || m.sticker;
   if (media?.id) {
     try {
