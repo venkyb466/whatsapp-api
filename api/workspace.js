@@ -101,7 +101,7 @@ export default async function handler(req, res) {
         let invited = false;
         if (!userId) {
           const origin = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
-          const { data, error } = await db.auth.admin.inviteUserByEmail(email, { redirectTo: origin });
+          const { data, error } = await db.auth.admin.inviteUserByEmail(email, { redirectTo: origin + '/app/' });
           if (error) return json(res, 400, { error: `Could not send invite: ${error.message}` });
           userId = data.user.id; invited = true;
         }
