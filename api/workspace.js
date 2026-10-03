@@ -35,6 +35,8 @@ export default async function handler(req, res) {
 
   // ---- actions that don't need an active workspace ----
   if (b.action === 'create') {
+    // Public self-serve workspaces are switched off for now — only the platform owner can create one.
+    if (!isPlatformAdmin) return json(res, 403, { error: 'New workspaces are not open yet' });
     const name = String(b.name || '').trim();
     if (!name) return json(res, 400, { error: 'Business name is required' });
     const owned = auth.memberships.filter((m) => m.role === 'owner').length;
@@ -101,7 +103,7 @@ export default async function handler(req, res) {
         let invited = false;
         if (!userId) {
           const origin = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
-          const { data, error } = await db.auth.admin.inviteUserByEmail(email, { redirectTo: origin + '/app/' });
+          const { data, error } = await db.auth.admin.inviteUserByEmail(email, { redirectTo: origin });
           if (error) return json(res, 400, { error: `Could not send invite: ${error.message}` });
           userId = data.user.id; invited = true;
         }
