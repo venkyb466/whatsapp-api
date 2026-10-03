@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NoLeak · Dashboard</title>
+<title>Namo Padmavati · WhatsApp</title>
 <style>
 
   :root{
@@ -320,14 +320,13 @@
 <!-- LOGIN -->
 <section id="login">
   <form class="login-card" id="loginForm">
-    <a href="/" style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px;color:#0E0B26;text-decoration:none;margin-bottom:18px"><span style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#8B5CF6,#6D28D9);color:#fff;display:grid;place-items:center;font-size:16px">N</span>NoLeak</a>
-    <h1 id="authTitle">Sign in</h1>
+        <h1 id="authTitle">Sign in</h1>
     <p id="authSub">Manage WhatsApp campaigns, chats and store automations.</p>
     <label>Email</label><input type="email" id="email" autocomplete="username" required>
     <label>Password</label><input type="password" id="password" autocomplete="current-password" required minlength="8">
     <div class="err" id="loginErr"></div>
     <button class="primary" style="width:100%" type="submit" id="authBtn">Sign in</button>
-    <p class="muted" style="margin:14px 0 0;font-size:13px;text-align:center"><a href="/" style="color:var(--muted)">← Home</a> · <a href="#" id="authToggle" style="color:var(--brand)">New here? Create an account</a> · <a href="#" id="authForgot" style="color:var(--brand)">Forgot password?</a></p>
+    <p class="muted" style="margin:14px 0 0;font-size:13px;text-align:center"><a href="#" id="authToggle" class="hidden"></a><a href="#" id="authForgot" style="color:var(--brand)">Forgot password?</a></p>
   </form>
 </section>
 
@@ -688,12 +687,12 @@ function setAuthMode(up){ signUpMode=up; $('authTitle').textContent=up?'Create y
   $('authToggle').textContent=up?'Already have an account? Sign in':'New here? Create an account'; $('password').autocomplete=up?'new-password':'current-password'; $('loginErr').textContent=''; }
 $('authToggle').onclick=(e)=>{ e.preventDefault(); setAuthMode(!signUpMode); };
 $('authForgot').onclick=async(e)=>{ e.preventDefault(); const email=$('email').value.trim(); if(!email) return $('loginErr').textContent='Enter your email first.';
-  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/app/' }); $('loginErr').textContent = error ? error.message : 'Check your email for a reset link.'; };
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin }); $('loginErr').textContent = error ? error.message : 'Check your email for a reset link.'; };
 $('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault(); $('loginErr').textContent='';
   const email=$('email').value.trim(), password=$('password').value;
   if (signUpMode) {
-    const { data, error } = await sb.auth.signUp({ email, password, options:{ emailRedirectTo: location.origin + '/app/' } });
+    const { data, error } = await sb.auth.signUp({ email, password, options:{ emailRedirectTo: location.origin } });
     if (error) return $('loginErr').textContent = error.message;
     if (!data.session) $('loginErr').innerHTML = '<span style="color:var(--ok)">Almost done — check your email and click the confirmation link, then sign in.</span>';
     return;
@@ -704,7 +703,6 @@ $('loginForm').addEventListener('submit', async (e) => {
 $('logout').addEventListener('click', () => sb.auth.signOut());
 $('obLogout').onclick=(e)=>{ e.preventDefault(); sb.auth.signOut(); };
 let booted=false;
-if (new URLSearchParams(location.search).get('signup')==='1') setAuthMode(true);
 sb.auth.onAuthStateChange((evt, s) => {
   session = s;
   if (evt==='PASSWORD_RECOVERY') { const np=prompt('Choose a new password (min 8 characters):'); if(np) sb.auth.updateUser({password:np}).then(({error})=>toast(error?error.message:'Password updated')); }
@@ -717,7 +715,7 @@ async function boot(){
   $('login').classList.add('hidden');
   let me; try { me = await api('/api/workspace'); } catch(err){ toast(err.message); return; }
   ME = me.user; WORKSPACES = me.workspaces||[]; IS_PADMIN = me.isPlatformAdmin;
-  if (!WORKSPACES.length) { $('app').classList.add('hidden'); $('onboard').classList.remove('hidden'); $('obWho').textContent = ME.email; return; }
+  if (!WORKSPACES.length) { await sb.auth.signOut(); $('login').classList.remove('hidden'); $('loginErr').textContent='This account does not have access. Ask the admin to invite you.'; return; }
   $('onboard').classList.add('hidden'); $('app').classList.remove('hidden'); $('who').textContent = ME.email;
   let saved=null; try{ saved=localStorage.getItem(WS_KEY); }catch{}
   selectWorkspace((WORKSPACES.find(w=>w.id===saved)||WORKSPACES[0]).id);
@@ -725,8 +723,8 @@ async function boot(){
 function selectWorkspace(id){
   WS = WORKSPACES.find(w=>w.id===id); ROLE = WS.role; try{ localStorage.setItem(WS_KEY, id); }catch{}
   $('wsName').textContent = WS.name; $('wsSub').textContent = WS.display_phone || 'WhatsApp not connected';
-  $('wsSwitch').innerHTML = WORKSPACES.map(w=>`<option value="${w.id}" ${w.id===id?'selected':''}>${esc(w.name)}${w.role!=='owner'?' ('+w.role+')':''}</option>`).join('') + '<option value="__new">+ New workspace…</option>';
-  $('wsSwitch').classList.toggle('hidden', WORKSPACES.length<2 && !IS_PADMIN && ROLE!=='owner');
+  $('wsSwitch').innerHTML = WORKSPACES.map(w=>`<option value="${w.id}" ${w.id===id?'selected':''}>${esc(w.name)}${w.role!=='owner'?' ('+w.role+')':''}</option>`).join('') ;
+  $('wsSwitch').classList.toggle('hidden', WORKSPACES.length<2);
   document.querySelectorAll('.adminOnly').forEach(el=>el.classList.toggle('hidden', !isAdmin()));
   const trialLeft = WS.plan==='trial' && WS.trial_ends_at ? Math.ceil((new Date(WS.trial_ends_at)-Date.now())/86400000) : null;
   $('trialBanner').classList.toggle('hidden', trialLeft===null);
@@ -1262,7 +1260,7 @@ async function loadSetup(){
       <div class="row" style="margin-top:10px"><button class="primary sm" id="btnSaveWs">Save</button></div>`;
     $('btnSaveWs').onclick=async()=>{ try{ await api('/api/workspace',{method:'POST',body:{action:'update',name:$('wsNameIn').value.trim(),settings:{store_name:$('wsStoreIn').value.trim(),business_id:$('wsBizIn').value.trim()}}}); toast('Saved'); await refreshWorkspaces(); }catch(err){ toast(err.message); } };
     $('migrateCard').classList.toggle('hidden', !s.workspace.uses_env_token);
-    if (s.isPlatformAdmin) loadPlatform(); else $('platformCard').classList.add('hidden');
+    $('platformCard').classList.add('hidden');
   }catch(err){ card.innerHTML=`<div class="err">${esc(err.message)}</div>`; }
 }
 async function loadPlatform(){
