@@ -11,7 +11,8 @@ import { json, requireAuth, readBody, graph } from './_lib.js';
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return json(res, 200, {});
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
-  const auth = await requireAuth(req, res); if (!auth) return;
+  const auth = await requireAuth(req, res, { admin: true }); if (!auth) return;
+  if (auth.via === 'user' && !auth.ws.uses_env_token) return json(res, 403, { error: 'Number migration is only available on the platform owner workspace' });
   const b = await readBody(req);
   try {
     switch (b.action) {

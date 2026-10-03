@@ -1,7 +1,22 @@
 // Meta WhatsApp webhook.
 //   GET  -> verification handshake (Meta calls this once when you save the callback URL)
-//   POST -> incoming messages + delivery status updates
-import { db, json, storeInboundMedia } from './_lib.js';
+//   POST -> incoming messages + delivery status updates, routed to the workspace that owns the phone number
+import { db, json, storeInboundMedia, workspaceByPhoneId, getWorkspace, DEFAULT_WS } from './_lib.js';
+import { handleInboundBot, inboundPayload } from './_bot.js';
+import { handleCodReply } from './_store.js';
+import crypto from 'node:crypto';
+
+export const config = { api: { bodyParser: false } };
+function rawBody(req) {
+  // Safety net: if the platform already consumed the stream, fall back to its parsed body.
+  if (req.readableEnded) { const b = req.body; return Promise.resolve(Buffer.isBuffer(b) ? b : Buffer.from(typeof b === 'string' ? b : JSON.stringify(b || {}))); }
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
@@ -13,14 +28,29 @@ export default async function handler(req, res) {
   }
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
 
-  // Always answer 200 quickly; Meta retries otherwise.
+  const raw = await rawBody(req);
+  // Verify the request really comes from Meta (enabled once META_APP_SECRET is set in Vercel).
+  if (process.env.META_APP_SECRET) {
+    const expected = 'sha256=' + crypto.createHmac('sha256', process.env.META_APP_SECRET).update(raw).digest('hex');
+    const got = String(req.headers['x-hub-signature-256'] || '');
+    if (got.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(expected))) {
+      console.warn('webhook signature mismatch'); return json(res, 401, { error: 'Bad signature' });
+    }
+  }
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    const body = JSON.parse(raw.toString('utf8') || '{}');
     for (const entry of body.entry || []) {
       for (const change of entry.changes || []) {
         const v = change.value || {};
-        for (const m of v.messages || []) await handleInbound(m, v.contacts || []);
-        for (const s of v.statuses || []) await handleStatus(s);
+        const ws = (await workspaceByPhoneId(v.metadata?.phone_number_id))
+          || (v.metadata?.phone_number_id === process.env.META_PHONE_NUMBER_ID ? await getWorkspace(DEFAULT_WS) : null);
+        if (!ws) { console.warn('webhook for unknown phone_number_id', v.metadata?.phone_number_id); continue; }
+        for (const m of v.messages || []) {
+          try { await handleInbound(ws, m, v.contacts || []); } catch (err) { console.error('inbound error', err); }
+        }
+        for (const s of v.statuses || []) {
+          try { await handleStatus(s); } catch (err) { console.error('status error', err); }
+        }
       }
     }
   } catch (err) {
@@ -39,9 +69,10 @@ function describe(m) {
     case 'audio': return '[audio]';
     case 'document': return `[document] ${m.document?.filename || ''}`;
     case 'sticker': return '[sticker]';
-    case 'location': return `[location] ${m.location?.latitude},${m.location?.longitude}`;
+    case 'location': return `[location] ${m.location?.name ? m.location.name + ' ' : ''}${m.location?.latitude},${m.location?.longitude}`;
     case 'reaction': return `[reaction] ${m.reaction?.emoji || ''}`;
     case 'contacts': return '[contact card] ' + (m.contacts || []).map((c) => c.name?.formatted_name || '').filter(Boolean).join(', ');
+    case 'order': return `[order] ${(m.order?.product_items || []).length} item(s)`;
     case 'unsupported': {
       const e = m.errors?.[0];
       return `⚠️ Message type not supported by WhatsApp API${e?.error_data?.details ? ' — ' + e.error_data.details : e?.title ? ' — ' + e.title : ''}. (Usually a poll, view-once photo/video, disappearing message, live location or event.) Ask the contact to resend as a normal message.`;
@@ -50,36 +81,52 @@ function describe(m) {
   }
 }
 
-async function handleInbound(m, waContacts) {
+async function handleInbound(ws, m, waContacts) {
   const phone = String(m.from || '').replace(/\D/g, '');
   if (!phone) return;
   const profileName = waContacts.find((c) => c.wa_id === m.from)?.profile?.name;
   const ts = new Date(Number(m.timestamp) * 1000).toISOString();
 
-  // Find or create the contact
-  let { data: contact } = await db.from('contacts').select('id,unread_count,name').eq('phone', phone).maybeSingle();
+  // Duplicate delivery from Meta? Then do nothing (prevents double bot replies).
+  const { data: dup } = await db.from('messages').select('id').eq('wa_message_id', m.id).maybeSingle();
+  if (dup) return;
+
+  let { data: contact } = await db.from('contacts').select('*').eq('workspace_id', ws.id).eq('phone', phone).maybeSingle();
+  const isNew = !contact;
   if (!contact) {
-    const { data: created } = await db.from('contacts')
-      .insert({ phone, name: profileName || phone, tags: ['inbound'] }).select('id,unread_count,name').single();
+    const { data: created, error } = await db.from('contacts')
+      .insert({ workspace_id: ws.id, phone, name: profileName || phone, tags: ['inbound'] }).select('*').single();
+    if (error) console.error('contact create failed', error.message);
     contact = created;
   }
   if (!contact) return;
+  const prevInboundAt = contact.last_inbound_at;
 
-  const row = { contact_id: contact.id, direction: 'in', wa_message_id: m.id, msg_type: m.type || 'text', body: describe(m), status: 'received', sent_at: ts };
-  if (m.type === 'unsupported' || !['text', 'image', 'video', 'audio', 'document', 'sticker', 'button', 'interactive', 'reaction', 'location', 'contacts'].includes(m.type)) row.raw = m; // keep the payload so we can see what it was
+  const row = { workspace_id: ws.id, contact_id: contact.id, direction: 'in', wa_message_id: m.id, msg_type: m.type || 'text', body: describe(m), status: 'received', sent_at: ts, source: 'customer' };
+  if (m.type === 'unsupported' || !['text', 'image', 'video', 'audio', 'document', 'sticker', 'button', 'interactive', 'reaction', 'location', 'contacts'].includes(m.type)) row.raw = m;
+  if (m.context?.forwarded || m.context?.frequently_forwarded) row.body = `↪ Forwarded${m.context.frequently_forwarded ? ' many times' : ''}\n${row.body}`;
   const media = m.image || m.video || m.audio || m.document || m.sticker;
-  if (media?.id) {
+  if (media?.id && ws.token) {
     try {
-      const stored = await storeInboundMedia(media.id, { contactId: contact.id, messageId: m.id, filename: m.document?.filename });
+      const stored = await storeInboundMedia(ws, media.id, { contactId: contact.id, messageId: m.id, filename: m.document?.filename });
       row.media_url = stored.url; row.media_mime = stored.mime; row.media_name = stored.name;
       row.body = media.caption || (m.type === 'document' ? (m.document?.filename || '') : '');
     } catch (err) { console.error('media store failed', err); row.body = describe(m) + ' (could not download)'; }
   }
-  await db.from('messages').upsert(row, { onConflict: 'wa_message_id', ignoreDuplicates: true });
+  const { error: insErr } = await db.from('messages').insert(row);
+  if (insErr) { if (/duplicate/i.test(insErr.message)) return; console.error('message insert failed', insErr.message); }
 
-  await db.from('contacts').update({
-    last_inbound_at: ts, last_message_at: ts, unread_count: (contact.unread_count || 0) + 1,
-  }).eq('id', contact.id);
+  const patch = { last_inbound_at: ts, last_message_at: ts, unread_count: (contact.unread_count || 0) + 1 };
+  if (contact.conv_status === 'closed') patch.conv_status = 'open';
+  if (profileName && (contact.name === contact.phone || !contact.name)) patch.name = profileName;
+  await db.from('contacts').update(patch).eq('id', contact.id);
+  Object.assign(contact, patch);
+
+  if (!ws.token) return; // can't reply without a connected number
+  const payload = inboundPayload(m);
+  if (payload.startsWith('cod:')) { await handleCodReply(ws, contact, payload); return; }
+  if (m.type === 'reaction') return;
+  try { await handleInboundBot(ws, contact, m, { isNew, prevInboundAt }); } catch (err) { console.error('bot error', err.message); }
 }
 
 async function handleStatus(s) {
@@ -90,7 +137,7 @@ async function handleStatus(s) {
 
   // Only move forward: sent -> delivered -> read. Never downgrade a read to delivered.
   const rank = { sent: 1, delivered: 2, read: 3, failed: 9 };
-  const { data: rows } = await db.from('campaign_log').select('id,status').eq('meta_message_id', s.id);
+  const { data: rows } = await db.from('campaign_log').select('id,status,delivered_at').eq('meta_message_id', s.id);
   for (const row of rows || []) {
     if ((rank[status] || 0) <= (rank[row.status] || 0) && status !== 'failed') continue;
     const patch = { status };
@@ -104,4 +151,5 @@ async function handleStatus(s) {
     if ((rank[status] || 0) <= (rank[msg.status] || 0) && status !== 'failed') continue;
     await db.from('messages').update({ status }).eq('id', msg.id);
   }
+  if (status === 'failed' && errMsg) await db.from('automation_jobs').update({ status: 'failed', error: errMsg }).eq('wa_message_id', s.id);
 }

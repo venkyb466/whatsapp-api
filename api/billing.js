@@ -1,13 +1,16 @@
 // GET /api/billing -> WhatsApp account billing state + spend analytics (from Meta) + per-campaign send counts
-import { db, json, requireAuth, graph } from './_lib.js';
+import { db, json, requireAuth, graph as rawGraph } from './_lib.js';
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return json(res, 200, {});
-  const auth = await requireAuth(req, res); if (!auth) return;
-  const waba = process.env.META_WABA_ID;
-  if (!waba || !process.env.META_ACCESS_TOKEN) return json(res, 500, { error: 'META_WABA_ID / META_ACCESS_TOKEN not set.' });
+  const auth = await requireAuth(req, res, { admin: true }); if (!auth) return;
+  if (auth.via !== 'user') return json(res, 403, { error: 'Sign in required' });
+  const ws = auth.ws;
+  const waba = ws.waba_id;
+  if (!waba || !ws.token) return json(res, 400, { error: 'Connect your WhatsApp account first (Settings → Connect WhatsApp).' });
+  const graph = (path, o = {}) => rawGraph(path, { ...o, token: ws.token });
 
-  const out = { wabaId: waba };
+  const out = { wabaId: waba, businessId: ws.settings?.business_id || null };
   // 1. Account + funding state
   try {
     out.account = await graph(`${waba}?fields=name,currency,timezone_id,account_review_status,ownership_type,business_verification_status`);
@@ -49,15 +52,16 @@ export default async function handler(req, res) {
 
   // 3. Phone limits
   try {
-    out.phone = await graph(`${process.env.META_PHONE_NUMBER_ID}?fields=display_phone_number,quality_rating,messaging_limit_tier,status,name_status`);
+    out.phone = await graph(`${ws.phone_number_id}?fields=display_phone_number,quality_rating,messaging_limit_tier,status,name_status`);
   } catch (e) { out.phoneError = e.message; }
 
   // 4. Per-campaign counts from our DB (for cost estimates)
-  const { data: campaigns } = await db.from('campaigns').select('id,name,status,created_at,total_targeted');
-  const { data: stats } = await db.from('campaign_stats').select('*');
+  const { data: campaigns } = await db.from('campaigns').select('id,name,status,created_at,total_targeted').eq('workspace_id', ws.id);
+  const ids = (campaigns || []).map((c) => c.id);
+  const { data: stats } = ids.length ? await db.from('campaign_stats').select('*').in('campaign_id', ids) : { data: [] };
   const byId = Object.fromEntries((stats || []).map((s) => [s.campaign_id, s]));
   out.campaigns = (campaigns || []).map((c) => ({ ...c, sent: Number(byId[c.id]?.sent || 0), failed: Number(byId[c.id]?.failed || 0) }));
-  const { count: totalSent } = await db.from('campaign_log').select('id', { count: 'exact', head: true }).in('status', ['sent', 'delivered', 'read']);
+  const { count: totalSent } = await db.from('campaign_log').select('id', { count: 'exact', head: true }).eq('workspace_id', ws.id).in('status', ['sent', 'delivered', 'read']);
   out.totalSentAllTime = totalSent || 0;
 
   return json(res, 200, out);
