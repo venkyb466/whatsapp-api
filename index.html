@@ -26,7 +26,7 @@
   button.icon{padding:8px 10px;color:var(--muted)}
   button.sm{padding:5px 11px;font-size:13px}
   button:disabled{opacity:.45;cursor:not-allowed}
-  input[type=text],input[type=email],input[type=password],select,textarea{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:#fff;width:100%;color:var(--ink)}
+  input[type=text],input[type=email],input[type=password],input[type=number],input[type=time],input[type=datetime-local],select,textarea{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:#fff;width:100%;color:var(--ink)}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
   textarea{resize:vertical;min-height:90px}
   .hidden{display:none!important}
@@ -234,6 +234,8 @@
   html[data-theme=glass] input[type=text],
   html[data-theme=glass] input[type=email],
   html[data-theme=glass] input[type=password],
+  html[data-theme=glass] input[type=number],
+  html[data-theme=glass] input[type=time],
   html[data-theme=glass] select,
   html[data-theme=glass] textarea{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#e8ecf1}
   html[data-theme=glass] input::placeholder,html[data-theme=glass] textarea::placeholder{color:#7d8794}
@@ -277,6 +279,39 @@
   html[data-theme=glass] .bulk button.done{background:none;border-color:transparent;color:#8ab4ff}
   html[data-theme=glass] .bulk button.done:hover{background:rgba(138,180,255,.12)}
   @media (max-width:820px){aside .themeseg{margin:0;order:9}}
+  /* ===== SaaS additions ===== */
+  .wsswitch{margin:4px 6px 6px;width:calc(100% - 12px);font-size:13px;padding:7px 9px}
+  .trialbar{margin:0 6px 8px;padding:7px 10px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px}
+  .inboxbar{margin-bottom:10px;gap:10px}
+  .seg{display:inline-flex;gap:3px;background:#f2f4f7;border:1px solid var(--line);border-radius:11px;padding:3px}
+  .seg button{border:0;background:none;padding:6px 12px;border-radius:8px;font-size:13px;color:var(--muted)}
+  .seg button.active{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(17,27,33,.14)}
+  .switch{display:inline-flex;align-items:center;gap:8px;font-weight:500;margin:0;cursor:pointer}
+  .switch input{width:16px;height:16px;accent-color:var(--brand)}
+  .hoursgrid{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;align-items:center}
+  .hoursgrid .row{gap:6px}
+  .hoursgrid input[type=time]{width:auto;padding:6px 8px}
+  .conv .who2{font-size:11px;color:var(--brand-dk);background:var(--brand-soft);border-radius:999px;padding:1px 7px;margin-left:4px;white-space:nowrap}
+  .msg.note{align-self:center;background:#fef9c3;border:1px dashed #facc15;max-width:85%}
+  .msg .src{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:#6b7280;margin-bottom:2px}
+  .threadtools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .threadtools select{width:auto;padding:5px 8px;font-size:12.5px}
+  .kv{display:grid;grid-template-columns:170px 1fr;gap:6px 12px;align-items:center;font-size:13.5px}
+  .kv code.k{user-select:all}
+  .item{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:0}
+  .item .grow{flex:1;min-width:0}
+  .item .grow > b{display:block}
+  .item .grow > span{display:block;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+  .btnrow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+  .btnrow input{flex:1}
+  .btnrow select{flex:1}
+  html[data-theme=glass] .seg{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14)}
+  html[data-theme=glass] .seg button.active{background:rgba(255,255,255,.18);color:#fff;box-shadow:none}
+  html[data-theme=glass] .trialbar{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.3);color:#fcd34d}
+  html[data-theme=glass] .msg.note{background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.4)}
+  html[data-theme=glass] .conv .who2{background:rgba(37,99,235,.25);color:#bcd2ff}
+  @media (max-width:820px){.wsswitch{width:auto;margin:0 6px}.hoursgrid{grid-template-columns:1fr}.kv{grid-template-columns:1fr}}
 
 </style>
 </head>
@@ -285,26 +320,44 @@
 <!-- LOGIN -->
 <section id="login">
   <form class="login-card" id="loginForm">
-    <h1>Namo Padmavati · WhatsApp</h1>
-    <p>Sign in to manage contacts, campaigns and chats.</p>
+    <h1 id="authTitle">Sign in</h1>
+    <p id="authSub">Manage WhatsApp campaigns, chats and store automations.</p>
     <label>Email</label><input type="email" id="email" autocomplete="username" required>
-    <label>Password</label><input type="password" id="password" autocomplete="current-password" required>
+    <label>Password</label><input type="password" id="password" autocomplete="current-password" required minlength="8">
     <div class="err" id="loginErr"></div>
-    <button class="primary" style="width:100%" type="submit">Sign in</button>
+    <button class="primary" style="width:100%" type="submit" id="authBtn">Sign in</button>
+    <p class="muted" style="margin:14px 0 0;font-size:13px;text-align:center"><a href="#" id="authToggle" style="color:var(--brand)">New here? Create an account</a> · <a href="#" id="authForgot" style="color:var(--brand)">Forgot password?</a></p>
+  </form>
+</section>
+
+<!-- ONBOARDING (no workspace yet) -->
+<section id="onboard" class="hidden" style="min-height:100vh;display:grid;place-items:center;padding:16px">
+  <form class="login-card" id="onboardForm" style="max-width:440px">
+    <h1>Create your workspace</h1>
+    <p>A workspace holds one WhatsApp number with its contacts, campaigns, chatbot and team. You can invite teammates after this.</p>
+    <label>Business name</label><input type="text" id="obName" required placeholder="e.g. Sharma Sarees">
+    <div class="err" id="obErr"></div>
+    <button class="primary" style="width:100%" type="submit">Create workspace — 14-day free trial</button>
+    <p class="muted" style="margin:14px 0 0;font-size:13px;text-align:center">Signed in as <span id="obWho"></span> · <a href="#" id="obLogout" style="color:var(--brand)">Sign out</a></p>
   </form>
 </section>
 
 <!-- APP -->
 <section id="app" class="hidden">
   <aside>
-    <div class="brand">Namo Padmavati<small>WhatsApp</small></div>
+    <div class="brand"><span id="wsName">Namo Padmavati</span><small id="wsSub">WhatsApp</small></div>
+    <select id="wsSwitch" class="wsswitch hidden" title="Switch workspace"></select>
+    <div id="trialBanner" class="trialbar hidden"></div>
     <nav class="navlist">
       <button class="nav active" data-view="contacts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Contacts</span></button>
       <button class="nav" data-view="campaigns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg><span>Campaigns</span></button>
       <button class="nav" data-view="templates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg><span>Templates</span></button>
       <button class="nav" data-view="inbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Inbox</span> <span class="badge hidden" id="unreadBadge">0</span></button>
-      <button class="nav" data-view="billing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg><span>Billing</span></button>
-      <button class="nav" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></button>
+      <button class="nav adminOnly" data-view="automations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><span>Store automations</span></button>
+      <button class="nav adminOnly" data-view="chatbot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg><span>Chatbot</span></button>
+      <button class="nav adminOnly" data-view="team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg><span>Team</span></button>
+      <button class="nav adminOnly" data-view="billing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg><span>Billing</span></button>
+      <button class="nav adminOnly" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></button>
     </nav>
     <div class="themeseg" role="group" aria-label="Theme">
       <button type="button" data-theme="light" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Light</button>
@@ -372,12 +425,64 @@
 
     <!-- INBOX -->
     <div id="view-inbox" class="hidden">
+      <div class="inboxbar row">
+        <div class="seg" id="convFilter">
+          <button data-f="all" class="active">All open</button><button data-f="mine">Mine</button><button data-f="unassigned">Unassigned</button><button data-f="closed">Closed</button>
+        </div>
+        <div class="search" style="max-width:260px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" id="convSearch" placeholder="Search chats"></div>
+      </div>
       <div class="inbox">
         <div class="convs" id="convs"></div>
         <div class="thread" id="thread">
           <div class="empty" style="margin:auto">Select a conversation</div>
         </div>
       </div>
+    </div>
+
+    <!-- STORE AUTOMATIONS -->
+    <div id="view-automations" class="hidden">
+      <div class="row" style="margin-bottom:6px"><h2 style="margin:0">Store automations</h2><div class="spacer"></div><button id="btnRefreshAuto">↻</button></div>
+      <p class="muted" style="margin:0 0 14px">Connect your Shopify or WooCommerce store and send abandoned-cart reminders, order confirmations, COD confirmations and shipping updates on WhatsApp automatically.</p>
+      <div class="stats" id="autoStats"></div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="row"><h3 style="margin:0">1 · Stores</h3><div class="spacer"></div><button id="btnAddStore" class="primary sm">+ Connect a store</button></div>
+        <div id="storeList" style="margin-top:10px"></div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="row"><h3 style="margin:0">2 · Message templates</h3><div class="spacer"></div><button id="btnInstallTpl" class="sm">Create recommended templates</button></div>
+        <p class="muted" style="margin:6px 0 0">Automations send Meta-approved templates. One click creates a ready-made set (cart reminder, order confirmation, COD confirmation, shipping and delivery updates) and wires them to automations below. Approval usually takes minutes; turn each automation on once its template is approved.</p>
+        <pre class="preview hidden" id="installOut" style="margin-top:8px"></pre>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="row"><h3 style="margin:0">3 · Automations</h3><div class="spacer"></div><button id="btnAddAuto" class="sm">+ Add automation</button></div>
+        <div id="autoList" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3 style="margin:0">Recent activity</h3><div class="spacer"></div><select id="evFilter" style="width:auto"><option value="">Carts & orders</option><option value="cart">Abandoned carts</option><option value="order">Orders</option></select></div>
+        <div id="eventList" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- CHATBOT -->
+    <div id="view-chatbot" class="hidden">
+      <div class="row" style="margin-bottom:6px"><h2 style="margin:0">Chatbot & auto-replies</h2><div class="spacer"></div><label class="switch"><input type="checkbox" id="botEnabled"> <span>Bot on</span></label><button id="btnAddRule" class="primary">+ New reply</button></div>
+      <p class="muted" style="margin:0 0 14px">Replies are free inside the 24-hour window that opens when a customer messages you. The bot stays quiet for a while after a team member replies, so it never talks over your agents.</p>
+      <div class="grid" id="ruleList"></div>
+      <div class="empty hidden" id="ruleEmpty">No auto-replies yet. Start with a <b>Welcome message</b> and an <b>Away message</b>, then add keywords like "price", "menu" or "location".<br><br><button id="btnStarterRules" class="primary">Add starter replies</button></div>
+      <div class="card" style="margin-top:14px">
+        <h3 style="margin:0 0 6px">Business hours</h3>
+        <p class="muted" style="margin:0 0 10px">Outside these hours the <b>Away</b> reply is sent (at most once every 12 hours per customer). Times are India time.</p>
+        <div id="hoursGrid" class="hoursgrid"></div>
+        <div class="row" style="margin-top:10px"><label style="margin:0">Pause bot after an agent replies for</label><input type="number" id="handoffMin" min="0" max="1440" style="width:90px"> <span class="muted">minutes</span><div class="spacer"></div><button id="btnSaveHours" class="primary sm">Save</button></div>
+      </div>
+    </div>
+
+    <!-- TEAM -->
+    <div id="view-team" class="hidden">
+      <div class="row" style="margin-bottom:6px"><h2 style="margin:0">Team</h2><div class="spacer"></div><button id="btnInvite" class="primary">+ Invite teammate</button></div>
+      <p class="muted" style="margin:0 0 14px"><b>Owner/Admin</b>: everything including settings, automations and billing. <b>Agent</b>: contacts, campaigns and inbox only. Chats can be assigned to any member from the inbox.</p>
+      <div class="list" id="memberList"></div>
+      <div class="muted" id="planNote" style="margin-top:10px;font-size:13px"></div>
     </div>
 
     <!-- BILLING -->
@@ -389,8 +494,11 @@
     <!-- SETTINGS -->
     <div id="view-settings" class="hidden">
       <h2>Settings & connection</h2>
-      <div class="card" id="setupCard">Loading…</div>
-      <div class="card" style="margin-top:12px" id="migrateCard">
+      <div class="card" id="connectCard">Loading…</div>
+      <div class="card" style="margin-top:12px" id="setupCard">Loading…</div>
+      <div class="card" style="margin-top:12px" id="wsCard"></div>
+      <div class="card hidden" style="margin-top:12px" id="platformCard"></div>
+      <div class="card hidden" style="margin-top:12px" id="migrateCard">
         <h3 style="margin:0 0 6px">Move phone number to another WhatsApp account</h3>
         <p class="muted" style="margin:0 0 10px">Migrates a number between two WhatsApp Business Accounts you own, keeping its display name, quality rating and messaging tier. Two-step verification must be off on the number first. Do the steps in order.</p>
         <div class="row" style="margin-bottom:8px"><label style="margin:0;width:170px">Destination WABA ID</label><input type="text" id="mWaba" style="width:220px" placeholder="e.g. 2649671488798752"></div>
@@ -434,7 +542,7 @@
   <label>Audience</label><select id="cTag"><option value="">All contacts</option></select>
   <div class="muted" id="cCount" style="margin-top:6px"></div>
   <label>Messages per day (drip)</label>
-  <div class="row"><input type="number" id="cDaily" min="1" max="100000" value="250" style="width:120px"> <span class="muted" style="font-size:12px">Sends up to this many in any 24-hour window, then pauses and continues automatically the next day. Leave at or below your Meta limit (currently 250).</span></div>
+  <div class="row"><input type="number" id="cDaily" min="1" max="100000" value="250" style="width:120px"> <span class="muted" style="font-size:12px">Sends up to this many in any 24-hour window, then pauses and continues automatically the next day. Leave at or below your Meta messaging limit.</span></div>
   <label>When to send</label>
   <div class="row"><label style="margin:0;font-weight:400"><input type="radio" name="cWhen" value="manual" checked> Start manually</label>
   <label style="margin:0;font-weight:400"><input type="radio" name="cWhen" value="schedule"> Schedule for</label>
@@ -454,8 +562,80 @@
   <label>Body</label><textarea id="tBody" required placeholder="Hi {{1}}, I'm Shikha Jain from Namo Padmavati…&#10;&#10;Reply STOP to opt out"></textarea>
   <label>Footer (optional)</label><input type="text" id="tFooter" maxlength="60">
   <label>Quick reply buttons (optional, comma separated, max 3)</label><input type="text" id="tButtons" placeholder="Yes, interested; Not now">
+  <label>Link button (optional)</label>
+  <div class="row"><input type="text" id="tUrlText" placeholder="Button text, e.g. Shop now" style="flex:1" maxlength="25"><input type="text" id="tUrl" placeholder="https://yourshop.com/{{1}}" style="flex:2"></div>
   <div class="err" id="tErr"></div>
   <div class="actions"><button type="button" id="tCancel">Cancel</button><button class="primary" type="submit">Submit for approval</button></div>
+</form></div>
+
+<!-- BOT RULE EDITOR -->
+<div class="overlay hidden" id="ruleModal"><form class="modal" id="ruleForm" style="max-width:560px">
+  <h3 id="ruleTitle">New auto-reply</h3>
+  <label>Name</label><input type="text" id="rName" required placeholder="e.g. Price list">
+  <div class="row"><div style="flex:1"><label>When</label><select id="rTrigger">
+    <option value="keyword">Customer message contains a keyword</option>
+    <option value="welcome">First message / new conversation (welcome)</option>
+    <option value="away">Outside business hours (away)</option>
+    <option value="fallback">Nothing else matched (fallback)</option>
+    <option value="button">Only when a button points here (menu step)</option>
+  </select></div></div>
+  <div id="rKwBox"><label>Keywords (comma separated)</label><input type="text" id="rKeywords" placeholder="price, rate, cost">
+    <div class="row" style="margin-top:6px"><label style="margin:0;font-weight:400"><input type="radio" name="rMatch" value="contains" checked> contains the word</label><label style="margin:0;font-weight:400"><input type="radio" name="rMatch" value="exact"> is exactly</label><label style="margin:0;font-weight:400"><input type="radio" name="rMatch" value="starts"> starts with</label></div></div>
+  <label>Reply</label><textarea id="rText" placeholder="Hi {{first_name}}! Here's our price list…"></textarea>
+  <div class="muted" style="font-size:12px">Variables: <code class="k">{{name}}</code> <code class="k">{{first_name}}</code> <code class="k">{{business}}</code></div>
+  <label>Attach image / video / PDF (optional)</label>
+  <div class="row"><input type="file" id="rFile" accept="image/*,video/mp4,application/pdf" style="flex:1"><span class="muted" id="rFileName" style="font-size:12px"></span><button type="button" class="ghost sm" id="rFileClear">✕</button></div>
+  <label>Buttons (optional, up to 10 — 3 or fewer show as buttons, more as a menu list)</label>
+  <div id="rButtons"></div>
+  <button type="button" class="sm" id="rAddBtn">+ Add button</button>
+  <div class="row" style="margin-top:6px"><div style="flex:1"><label>Add tag to customer</label><input type="text" id="rTag" placeholder="e.g. price-enquiry"></div><div style="flex:1"><label>Assign chat to</label><select id="rAssign"><option value="">— nobody —</option></select></div></div>
+  <div class="row" style="margin-top:6px"><label style="margin:0">Priority</label><input type="number" id="rPriority" value="100" style="width:90px"><span class="muted" style="font-size:12px">lower runs first when two keyword replies match</span></div>
+  <div class="err" id="rErr"></div>
+  <div class="actions"><button type="button" class="danger hidden" id="rDelete" style="margin-right:auto">Delete</button><button type="button" id="rCancel">Cancel</button><button class="primary" type="submit">Save</button></div>
+</form></div>
+
+<!-- STORE CONNECTION -->
+<div class="overlay hidden" id="storeModal"><form class="modal" id="storeForm" style="max-width:600px">
+  <h3>Connect a store</h3>
+  <div class="row"><div style="flex:1"><label>Platform</label><select id="sPlatform"><option value="shopify">Shopify</option><option value="woocommerce">WooCommerce</option><option value="custom">Other website / custom</option></select></div>
+  <div style="flex:1"><label>Store name</label><input type="text" id="sName" required placeholder="My Shop"></div></div>
+  <label>Store domain</label><input type="text" id="sDomain" placeholder="myshop.myshopify.com or myshop.com">
+  <label>Default country code for phone numbers without one</label><input type="text" id="sCc" value="91" style="width:90px">
+  <div id="sHelp" class="tpl" style="max-height:none;font-size:12.5px"></div>
+  <div id="sSecretBox"><label id="sSecretLabel">Webhook signing secret</label><input type="text" id="sSecret" placeholder=""></div>
+  <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Optional: API access to update orders from WhatsApp (COD confirm/cancel tags & notes)</summary>
+    <label id="sKeyLabel">Admin API access token</label><input type="text" id="sKey" autocomplete="off">
+    <div id="sSecret2Box"><label>Consumer secret</label><input type="text" id="sApiSecret" autocomplete="off"></div>
+  </details>
+  <div class="err" id="sErr"></div>
+  <div class="actions"><button type="button" class="danger hidden" id="sDelete" style="margin-right:auto">Remove</button><button type="button" id="sCancel">Cancel</button><button class="primary" type="submit">Save</button></div>
+</form></div>
+
+<!-- AUTOMATION -->
+<div class="overlay hidden" id="autoModal"><form class="modal" id="autoForm" style="max-width:560px">
+  <h3 id="aTitle">Automation</h3>
+  <div class="row"><div style="flex:1"><label>Event</label><select id="aEvent">
+    <option value="abandoned_cart">Abandoned cart</option><option value="order_created">Order placed</option><option value="cod_confirmation">COD order — ask to confirm</option>
+    <option value="order_shipped">Order shipped</option><option value="order_delivered">Order delivered</option><option value="order_cancelled">Order cancelled</option></select></div>
+  <div style="flex:1"><label>Name</label><input type="text" id="aName" required></div></div>
+  <label>Template</label><select id="aTemplate" required></select>
+  <div class="tpl hidden" id="aPreview"></div>
+  <div id="aParams"></div>
+  <div id="aUrlBox" class="hidden"><label>Link button opens</label><select id="aUrlParam"><option value="link_checkout">Checkout page (tracked short link)</option><option value="link_order">Order status page (tracked short link)</option><option value="link_tracking">Courier tracking page (tracked short link)</option></select>
+    <div class="muted" style="font-size:12px;margin-top:4px">The template's link button must be <code class="k" id="aGoUrl"></code></div></div>
+  <label>Send after</label><div class="row"><input type="number" id="aDelay" min="0" value="0" style="width:110px"><select id="aDelayUnit" style="width:auto"><option value="1">minutes</option><option value="60">hours</option><option value="1440">days</option></select><span class="muted" style="font-size:12px" id="aDelayHint"></span></div>
+  <label class="switch" style="margin-top:12px"><input type="checkbox" id="aActive"> <span>Active</span></label>
+  <div class="err" id="aErr"></div>
+  <div class="actions"><button type="button" class="danger hidden" id="aDelete" style="margin-right:auto">Delete</button><button type="button" id="aCancel">Cancel</button><button class="primary" type="submit">Save</button></div>
+</form></div>
+
+<!-- INVITE -->
+<div class="overlay hidden" id="inviteModal"><form class="modal" id="inviteForm">
+  <h3>Invite a teammate</h3><p>They'll get an email to set their password. If they already have an account, this workspace simply appears in their switcher.</p>
+  <label>Email</label><input type="email" id="iEmail" required>
+  <label>Role</label><select id="iRole"><option value="agent">Agent — inbox, contacts, campaigns</option><option value="admin">Admin — everything</option></select>
+  <div class="err" id="iErr"></div>
+  <div class="actions"><button type="button" id="iCancel">Cancel</button><button class="primary" type="submit">Send invite</button></div>
 </form></div>
 
 <div class="toast" id="toast"></div>
@@ -482,6 +662,9 @@ const $ = (id) => document.getElementById(id);
 
 let session = null, all = [], filtered = [], page = 0, selected = new Set(), editingId = null, parsedRows = null;
 let templates = [], campaigns = [], activeConv = null, inboxTimer = null, runningLoops = {};
+let WS = null, ROLE = 'agent', ME = null, WORKSPACES = [], IS_PADMIN = false, MEMBERS = [], convFilter = 'all';
+const WS_KEY = 'np_ws';
+const isAdmin = () => ROLE === 'owner' || ROLE === 'admin';
 
 // ---------- helpers ----------
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3200); }
@@ -492,43 +675,98 @@ function fmtDate(d){ return d ? new Date(d).toLocaleDateString('en-IN',{day:'2-d
 function fmtTime(d){ return d ? new Date(d).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : ''; }
 function ago(d){ if(!d) return ''; const s=(Date.now()-new Date(d))/1000; if(s<60) return 'now'; if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }
 async function api(path, opts={}){
-  const r = await fetch(path, { ...opts, headers: { 'Content-Type':'application/json', Authorization: 'Bearer '+session.access_token, ...(opts.headers||{}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const r = await fetch(path, { ...opts, headers: { 'Content-Type':'application/json', Authorization: 'Bearer '+session.access_token, ...(WS?{'X-Workspace-Id':WS.id}:{}), ...(opts.headers||{}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const data = await r.json().catch(()=>({}));
   if (!r.ok) throw new Error(data.error || `Request failed (${r.status})`);
   return data;
 }
 
 // ---------- auth ----------
+let signUpMode = false;
+function setAuthMode(up){ signUpMode=up; $('authTitle').textContent=up?'Create your account':'Sign in'; $('authBtn').textContent=up?'Create account':'Sign in';
+  $('authToggle').textContent=up?'Already have an account? Sign in':'New here? Create an account'; $('password').autocomplete=up?'new-password':'current-password'; $('loginErr').textContent=''; }
+$('authToggle').onclick=(e)=>{ e.preventDefault(); setAuthMode(!signUpMode); };
+$('authForgot').onclick=async(e)=>{ e.preventDefault(); const email=$('email').value.trim(); if(!email) return $('loginErr').textContent='Enter your email first.';
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin }); $('loginErr').textContent = error ? error.message : 'Check your email for a reset link.'; };
 $('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault(); $('loginErr').textContent='';
-  const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
+  const email=$('email').value.trim(), password=$('password').value;
+  if (signUpMode) {
+    const { data, error } = await sb.auth.signUp({ email, password, options:{ emailRedirectTo: location.origin } });
+    if (error) return $('loginErr').textContent = error.message;
+    if (!data.session) $('loginErr').innerHTML = '<span style="color:var(--ok)">Almost done — check your email and click the confirmation link, then sign in.</span>';
+    return;
+  }
+  const { error } = await sb.auth.signInWithPassword({ email, password });
   if (error) $('loginErr').textContent = error.message;
 });
 $('logout').addEventListener('click', () => sb.auth.signOut());
-sb.auth.onAuthStateChange((_e, s) => {
+$('obLogout').onclick=(e)=>{ e.preventDefault(); sb.auth.signOut(); };
+let booted=false;
+sb.auth.onAuthStateChange((evt, s) => {
   session = s;
-  if (s) { $('login').classList.add('hidden'); $('app').classList.remove('hidden'); $('who').textContent = s.user.email; loadContacts(); refreshUnread(); }
-  else { $('app').classList.add('hidden'); $('login').classList.remove('hidden'); clearInterval(inboxTimer); }
+  if (evt==='PASSWORD_RECOVERY') { const np=prompt('Choose a new password (min 8 characters):'); if(np) sb.auth.updateUser({password:np}).then(({error})=>toast(error?error.message:'Password updated')); }
+  if (s) { if (!booted) { booted=true; boot(); } }
+  else { booted=false; WS=null; $('app').classList.add('hidden'); $('onboard').classList.add('hidden'); $('login').classList.remove('hidden'); clearInterval(inboxTimer); }
 });
+
+// ---------- workspaces ----------
+async function boot(){
+  $('login').classList.add('hidden');
+  let me; try { me = await api('/api/workspace'); } catch(err){ toast(err.message); return; }
+  ME = me.user; WORKSPACES = me.workspaces||[]; IS_PADMIN = me.isPlatformAdmin;
+  if (!WORKSPACES.length) { $('app').classList.add('hidden'); $('onboard').classList.remove('hidden'); $('obWho').textContent = ME.email; return; }
+  $('onboard').classList.add('hidden'); $('app').classList.remove('hidden'); $('who').textContent = ME.email;
+  let saved=null; try{ saved=localStorage.getItem(WS_KEY); }catch{}
+  selectWorkspace((WORKSPACES.find(w=>w.id===saved)||WORKSPACES[0]).id);
+}
+function selectWorkspace(id){
+  WS = WORKSPACES.find(w=>w.id===id); ROLE = WS.role; try{ localStorage.setItem(WS_KEY, id); }catch{}
+  $('wsName').textContent = WS.name; $('wsSub').textContent = WS.display_phone || 'WhatsApp not connected';
+  $('wsSwitch').innerHTML = WORKSPACES.map(w=>`<option value="${w.id}" ${w.id===id?'selected':''}>${esc(w.name)}${w.role!=='owner'?' ('+w.role+')':''}</option>`).join('') + '<option value="__new">+ New workspace…</option>';
+  $('wsSwitch').classList.toggle('hidden', WORKSPACES.length<2 && !IS_PADMIN && ROLE!=='owner');
+  document.querySelectorAll('.adminOnly').forEach(el=>el.classList.toggle('hidden', !isAdmin()));
+  const trialLeft = WS.plan==='trial' && WS.trial_ends_at ? Math.ceil((new Date(WS.trial_ends_at)-Date.now())/86400000) : null;
+  $('trialBanner').classList.toggle('hidden', trialLeft===null);
+  if (trialLeft!==null) $('trialBanner').textContent = trialLeft>0 ? `Free trial · ${trialLeft} day${trialLeft===1?'':'s'} left` : 'Trial ended — contact us to choose a plan';
+  // reset per-workspace state
+  all=[]; filtered=[]; selected.clear(); templates=[]; campaigns=[]; activeConv=null; MEMBERS=[];
+  if (rtChannel) { sb.removeChannel(rtChannel); rtChannel=null; }
+  $('thread').innerHTML='<div class="empty" style="margin:auto">Select a conversation</div>';
+  loadMembers(); loadContacts(); refreshUnread();
+  showView(!WS.connected && isAdmin() ? 'settings' : 'contacts');
+}
+$('wsSwitch').addEventListener('change', async (e)=>{
+  if (e.target.value==='__new') { e.target.value=WS.id; const name=prompt('Name of the new workspace (business):'); if(!name) return;
+    try{ const r=await api('/api/workspace',{method:'POST',body:{action:'create',name}}); toast('Workspace created'); try{localStorage.setItem(WS_KEY, r.workspace.id);}catch{} boot(); }catch(err){ toast(err.message); } return; }
+  selectWorkspace(e.target.value);
+});
+$('onboardForm').addEventListener('submit', async (e)=>{ e.preventDefault(); $('obErr').textContent='';
+  try{ const r=await api('/api/workspace',{method:'POST',body:{action:'create',name:$('obName').value.trim()}}); try{localStorage.setItem(WS_KEY, r.workspace.id);}catch{} boot(); }catch(err){ $('obErr').textContent=err.message; } });
+async function loadMembers(){ if(!WS) return; const { data } = await sb.from('workspace_members').select('user_id,role,email,created_at').eq('workspace_id', WS.id).order('created_at'); MEMBERS = data||[]; }
+const memberName = (uid) => { const m=MEMBERS.find(x=>x.user_id===uid); return m ? (m.user_id===ME?.id ? 'You' : (m.email||'').split('@')[0]) : ''; };
 
 // ---------- navigation ----------
 document.querySelectorAll('button.nav').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
 function showView(v){
   document.querySelectorAll('button.nav').forEach(b => b.classList.toggle('active', b.dataset.view===v));
-  ['contacts','campaigns','templates','inbox','billing','settings'].forEach(x => $('view-'+x).classList.toggle('hidden', x!==v));
+  ['contacts','campaigns','templates','inbox','automations','chatbot','team','billing','settings'].forEach(x => $('view-'+x).classList.toggle('hidden', x!==v));
   clearInterval(inboxTimer);
   if (v==='billing') loadBilling();
   if (v==='campaigns') loadCampaigns();
   if (v==='templates') loadTemplates();
   if (v==='inbox') { loadInbox(); inboxTimer = setInterval(loadInbox, 15000); startRealtime(); warmSend(); }
   if (v==='settings') loadSetup();
+  if (v==='automations') loadAutomations();
+  if (v==='chatbot') loadBot();
+  if (v==='team') loadTeam();
 }
 // Realtime: new/updated messages push instantly instead of waiting for the poll.
 let rtChannel = null, rtDebounce = null;
 function startRealtime(){
   if (rtChannel) return;
-  rtChannel = sb.channel('inbox-live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => { clearTimeout(rtDebounce); rtDebounce = setTimeout(loadInbox, 250); })
+  rtChannel = sb.channel('inbox-live-'+WS.id)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: 'workspace_id=eq.'+WS.id }, () => { clearTimeout(rtDebounce); rtDebounce = setTimeout(loadInbox, 250); })
     .subscribe();
 }
 // Keep the send function warm so the first reply doesn't wait on a cold start.
@@ -539,7 +777,7 @@ function warmSend(){ const ping = () => fetch('/api/send-message', { method: 'OP
 async function fetchAll(table, select, order){
   const out=[]; let from=0;
   while(true){
-    let q = sb.from(table).select(select).range(from, from+999);
+    let q = sb.from(table).select(select).eq('workspace_id', WS.id).range(from, from+999);
     if (order) q = q.order(order.col, {ascending: order.asc, nullsFirst:false});
     const { data, error } = await q; if (error) throw error;
     out.push(...data); if (data.length < 1000) break; from += 1000;
@@ -548,7 +786,7 @@ async function fetchAll(table, select, order){
 }
 async function loadContacts(){
   try{
-    all = (await fetchAll('contacts','id,name,phone,tags,created_at,last_inbound_at,last_message_at,unread_count',{col:'created_at',asc:false})).map(c=>({...c,tags:c.tags||[]}));
+    all = (await fetchAll('contacts','id,name,phone,tags,created_at,last_inbound_at,last_message_at,unread_count,opted_out,assigned_to',{col:'created_at',asc:false})).map(c=>({...c,tags:c.tags||[]}));
     refreshTagFilter(); applyFilters();
     $('stTotal').textContent = all.length;
     $('stReplied').textContent = all.filter(c=>c.last_inbound_at).length;
@@ -570,7 +808,7 @@ function render(){
   $('rows').innerHTML = rows.map(c => {
     const initial = esc(((c.name||'?').trim()[0]||'?').toUpperCase());
     const tags = c.tags.map(t=>`<span class="chip">${esc(t)}<button title="remove tag" data-tag="${esc(t)}">×</button></span>`).join('');
-    const status = c.last_inbound_at
+    const status = c.opted_out ? `<span class="st" style="color:var(--danger)">Opted out</span>` : c.last_inbound_at
       ? `<span class="st rep">Replied · ${ago(c.last_inbound_at)}</span>`
       : (c.last_message_at ? `<span class="st">${ago(c.last_message_at)}</span>` : `<span class="st dash">—</span>`);
     return `<div class="crow" data-id="${c.id}">
@@ -623,7 +861,7 @@ $('bulkClear').onclick=()=>{selected.clear();render();};
 function openEdit(c){ editingId=c?c.id:null; $('editTitle').textContent=c?'Edit contact':'Add contact'; $('fName').value=c?c.name:''; $('fPhone').value=c?c.phone:''; $('fTags').value=c?c.tags.join(', '):''; $('editErr').textContent=''; $('editModal').classList.remove('hidden'); $('fName').focus(); }
 $('btnAdd').onclick=()=>openEdit(null); $('editCancel').onclick=()=>$('editModal').classList.add('hidden');
 $('editForm').addEventListener('submit', async (e)=>{
-  e.preventDefault(); const row={ name:$('fName').value.trim(), phone:normPhone($('fPhone').value), tags:parseTags($('fTags').value) };
+  e.preventDefault(); const row={ workspace_id: WS.id, name:$('fName').value.trim(), phone:normPhone($('fPhone').value), tags:parseTags($('fTags').value) };
   if (row.phone.length<10) { $('editErr').textContent='Phone looks too short — include the country code.'; return; }
   const { error } = await (editingId ? sb.from('contacts').update(row).eq('id',editingId) : sb.from('contacts').insert(row));
   if (error) { $('editErr').textContent = error.code==='23505' ? 'That phone number already exists.' : error.message; return; }
@@ -651,9 +889,9 @@ $('file').addEventListener('change', e=>{ if(e.target.files[0]) handleFile(e.tar
 const drop=$('drop'); drop.addEventListener('dragover', e=>{e.preventDefault();drop.classList.add('over')}); drop.addEventListener('dragleave', ()=>drop.classList.remove('over'));
 drop.addEventListener('drop', e=>{e.preventDefault();drop.classList.remove('over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);});
 $('uploadGo').onclick=async()=>{ if (!parsedRows) return; const extra=parseTags($('uploadTag').value); const existing=Object.fromEntries(all.map(c=>[c.phone,c]));
-  const rows = parsedRows.map(p=>{ const old=existing[p.phone]; return { phone:p.phone, name:p.name, tags:[...new Set([...(old?old.tags:[]), ...p.tags, ...extra])] }; });
+  const rows = parsedRows.map(p=>{ const old=existing[p.phone]; return { workspace_id: WS.id, phone:p.phone, name:p.name, tags:[...new Set([...(old?old.tags:[]), ...p.tags, ...extra])] }; });
   $('uploadGo').disabled=true; let done=0;
-  for (let i=0;i<rows.length;i+=500){ const { error } = await sb.from('contacts').upsert(rows.slice(i,i+500), { onConflict:'phone' });
+  for (let i=0;i<rows.length;i+=500){ const { error } = await sb.from('contacts').upsert(rows.slice(i,i+500), { onConflict:'workspace_id,phone' });
     if (error) { $('uploadErr').textContent=error.message; $('uploadGo').disabled=false; $('uploadGo').textContent='Import'; return; }
     done+=Math.min(500,rows.length-i); $('uploadGo').textContent=`Importing… ${done}/${rows.length}`; }
   $('uploadGo').textContent='Import'; $('uploadModal').classList.add('hidden'); toast(`Imported ${rows.length} contacts`); await loadContacts(); };
@@ -686,7 +924,7 @@ $('btnNewTemplate').onclick=()=>{ $('templateForm').reset(); $('tErr').textConte
 $('tCancel').onclick=()=>$('templateModal').classList.add('hidden');
 $('templateForm').addEventListener('submit', async e=>{
   e.preventDefault(); $('tErr').textContent='';
-  const body={ name:$('tName').value, category:$('tCategory').value, language:$('tLang').value, header:$('tHeader').value.trim()||null, body:$('tBody').value.trim(), footer:$('tFooter').value.trim()||null, quick_replies: $('tButtons').value.split(/[,;]/).map(s=>s.trim()).filter(Boolean) };
+  const body={ name:$('tName').value, category:$('tCategory').value, language:$('tLang').value, header:$('tHeader').value.trim()||null, body:$('tBody').value.trim(), footer:$('tFooter').value.trim()||null, quick_replies: $('tButtons').value.split(/[,;]/).map(s=>s.trim()).filter(Boolean), url_button: $('tUrlText').value.trim()&&$('tUrl').value.trim() ? { text:$('tUrlText').value.trim(), url:$('tUrl').value.trim() } : null };
   try{ const r=await api('/api/templates',{method:'POST',body}); $('templateModal').classList.add('hidden'); toast(`Template "${r.name}" submitted (status: ${r.status})`); loadTemplates(); }
   catch(err){ $('tErr').textContent=err.message; }
 });
@@ -694,7 +932,7 @@ $('templateForm').addEventListener('submit', async e=>{
 // ---------- campaigns ----------
 async function loadCampaigns(){
   try{
-    const [{ data: cs }, { data: stats }] = await Promise.all([ sb.from('campaigns').select('*').order('created_at',{ascending:false}), sb.from('campaign_stats').select('*') ]);
+    const [{ data: cs }, { data: stats }] = await Promise.all([ sb.from('campaigns').select('*').eq('workspace_id', WS.id).order('created_at',{ascending:false}), sb.from('campaign_stats').select('*') ]);
     const byId=Object.fromEntries((stats||[]).map(s=>[s.campaign_id,s]));
     campaigns=(cs||[]).map(c=>({...c, st: byId[c.id]||{sent:0,delivered:0,read:0,failed:0}}));
     renderCampaigns();
@@ -760,29 +998,39 @@ async function openCampaignModal(preset){
   showTplPreview();
 }
 function showTplPreview(){ const [name]=($('cTemplate').value||'').split('|'); const t=templates.find(x=>x.name===name); $('cPreview').classList.toggle('hidden',!t); if(t) $('cPreview').textContent=t.body.replace('{{1}}','<name>'); }
-function updateAudienceCount(){ const tag=$('cTag').value; const n=all.filter(c=>!tag||c.tags.includes(tag)).length; $('cCount').textContent=`${n} contact${n===1?'':'s'} will receive this message.`; }
+function updateAudienceCount(){ const tag=$('cTag').value; const n=all.filter(c=>!c.opted_out && (!tag||c.tags.includes(tag))).length; $('cCount').textContent=`${n} contact${n===1?'':'s'} will receive this message.`; }
 $('cTemplate').addEventListener('change', showTplPreview); $('cTag').addEventListener('change', updateAudienceCount);
 document.querySelectorAll('input[name=cWhen]').forEach(r=>r.addEventListener('change', ()=>{ const s=document.querySelector('input[name=cWhen]:checked').value==='schedule'; $('cAt').disabled=!s; if(s&&!$('cAt').value){ const d=new Date(Date.now()+3600000); d.setSeconds(0,0); $('cAt').value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16); } }));
 $('campaignForm').addEventListener('submit', async e=>{
   e.preventDefault(); $('cErr').textContent='';
   const [template_name, template_language]=($('cTemplate').value||'').split('|'); if(!template_name) return $('cErr').textContent='Choose an approved template.';
-  const tag=$('cTag').value||null; const total=all.filter(c=>!tag||c.tags.includes(tag)).length; if(!total) return $('cErr').textContent='No contacts in this audience.';
+  const tag=$('cTag').value||null; const total=all.filter(c=>!c.opted_out && (!tag||c.tags.includes(tag))).length; if(!total) return $('cErr').textContent='No contacts in this audience.';
   const when=document.querySelector('input[name=cWhen]:checked').value; let status='draft', scheduled_at=null;
   if (when==='schedule'){ const v=$('cAt').value; if(!v) return $('cErr').textContent='Pick a date and time.'; const d=new Date(v); if(d.getTime()<Date.now()-60000) return $('cErr').textContent='That time is in the past.'; status='scheduled'; scheduled_at=d.toISOString(); }
   const daily_limit = Math.max(1, parseInt($('cDaily').value,10) || 250);
-  const { error } = await sb.from('campaigns').insert({ name:$('cName').value.trim(), template_name, template_language, audience_tag:tag, total_targeted: total, status, scheduled_at, daily_limit });
+  const { error } = await sb.from('campaigns').insert({ workspace_id: WS.id, name:$('cName').value.trim(), template_name, template_language, audience_tag:tag, total_targeted: total, status, scheduled_at, daily_limit });
   if (error) return $('cErr').textContent=error.message;
   $('campaignModal').classList.add('hidden'); toast(status==='scheduled'?`Scheduled for ${fmtTime(scheduled_at)}`:'Campaign created — press Start when ready'); loadCampaigns();
 });
 
 // ---------- inbox ----------
-async function refreshUnread(){ const { data } = await sb.from('contacts').select('unread_count').gt('unread_count',0); const n=(data||[]).reduce((a,c)=>a+c.unread_count,0); $('unreadBadge').textContent=n; $('unreadBadge').classList.toggle('hidden',n===0); }
+async function refreshUnread(){ if(!WS) return; const { data } = await sb.from('contacts').select('unread_count').eq('workspace_id', WS.id).gt('unread_count',0); const n=(data||[]).reduce((a,c)=>a+c.unread_count,0); $('unreadBadge').textContent=n; $('unreadBadge').classList.toggle('hidden',n===0); }
 async function loadInbox(){
-  const { data } = await sb.from('contacts').select('id,name,phone,last_message_at,last_inbound_at,unread_count').not('last_message_at','is',null).order('last_message_at',{ascending:false}).limit(200);
+  if (!WS) return;
+  let q = sb.from('contacts').select('id,name,phone,last_message_at,last_inbound_at,unread_count,assigned_to,conv_status').eq('workspace_id', WS.id).not('last_message_at','is',null);
+  if (convFilter==='closed') q=q.eq('conv_status','closed'); else q=q.neq('conv_status','closed');
+  if (convFilter==='mine') q=q.eq('assigned_to', ME.id);
+  if (convFilter==='unassigned') q=q.is('assigned_to', null);
+  const term=($('convSearch').value||'').trim().replace(/[%,()]/g,'');
+  if (term) q=q.or(`name.ilike.%${term}%,phone.ilike.%${term}%`);
+  const { data } = await q.order('last_message_at',{ascending:false}).limit(300);
   const convs=data||[];
-  $('convs').innerHTML = convs.length ? convs.map(c=>`<div class="conv ${activeConv===c.id?'active':''}" data-id="${c.id}"><div class="av">${esc((c.name||'?')[0].toUpperCase())}</div><div class="meta"><b>${esc(c.name)}</b><span>${esc(c.phone)} · ${ago(c.last_message_at)}</span></div>${c.unread_count?`<span class="unread">${c.unread_count}</span>`:''}</div>`).join('') : '<div class="empty">No conversations yet.<br><small>Replies from contacts appear here once the webhook is connected.</small></div>';
+  $('convs').innerHTML = convs.length ? convs.map(c=>`<div class="conv ${activeConv===c.id?'active':''}" data-id="${c.id}"><div class="av">${esc((c.name||'?')[0].toUpperCase())}</div><div class="meta"><b>${esc(c.name)}</b><span>${esc(c.phone)} · ${ago(c.last_message_at)}${c.assigned_to?`<span class="who2">${esc(memberName(c.assigned_to)||'assigned')}</span>`:''}</span></div>${c.unread_count?`<span class="unread">${c.unread_count}</span>`:''}</div>`).join('')
+    : `<div class="empty" style="border:0">${convFilter==='mine'?'No chats assigned to you.':convFilter==='unassigned'?'No unassigned chats.':convFilter==='closed'?'No closed chats.':'No conversations yet.<br><small>Replies from contacts appear here once WhatsApp is connected.</small>'}</div>`;
   refreshUnread(); if (activeConv) loadThread(activeConv, true);
 }
+$('convFilter').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; convFilter=b.dataset.f; document.querySelectorAll('#convFilter button').forEach(x=>x.classList.toggle('active',x===b)); loadInbox(); });
+let convSearchT=null; $('convSearch').addEventListener('input', ()=>{ clearTimeout(convSearchT); convSearchT=setTimeout(loadInbox,250); });
 $('convs').addEventListener('click', e=>{ const el=e.target.closest('.conv'); if(el) openConv(el.dataset.id); });
 async function openConv(id){ activeConv=id; document.querySelectorAll('.conv').forEach(el=>el.classList.toggle('active',el.dataset.id===id)); await sb.from('contacts').update({unread_count:0}).eq('id',id); loadThread(id); refreshUnread(); }
 let threadKey = '', threadConv = null;
@@ -791,9 +1039,13 @@ function mediaHtml(url, mime, name){ if(!url) return ''; mime=mime||'';
   if (mime.startsWith('video/')) return `<video class="media" controls preload="metadata" src="${esc(url)}"></video>`;
   if (mime.startsWith('audio/')) return `<audio controls preload="metadata" src="${esc(url)}" style="max-width:100%"></audio>`;
   return `<a class="doc" href="${esc(url)}" target="_blank" rel="noopener">📄 ${esc(name||'Document')}</a>`; }
-function msgHtml(m){ return `<div class="msg ${m.direction}" data-id="${m.id}">${mediaHtml(m.media_url,m.media_mime,m.media_name)}${m.body?esc(m.body):''}<time>${fmtTime(m.sent_at)}${m.direction==='out'?' · '+esc(m.status||''):''}</time></div>`; }
+const SRC_LABEL = { bot:'🤖 Bot', automation:'🛒 Automation', campaign:'📣 Campaign' };
+function msgHtml(m){
+  if (m.direction==='note') return `<div class="msg note" data-id="${m.id}"><span class="src">📝 Note · ${esc(memberName(m.author_id)||'team')}</span><br>${esc(m.body)}<time>${fmtTime(m.sent_at)}</time></div>`;
+  const src = m.direction==='out' ? (SRC_LABEL[m.source] || (m.author_id ? esc(memberName(m.author_id)) : '')) : '';
+  return `<div class="msg ${m.direction}" data-id="${m.id}">${src?`<span class="src">${src}</span><br>`:''}${mediaHtml(m.media_url,m.media_mime,m.media_name)}${m.body?esc(m.body):''}<time>${fmtTime(m.sent_at)}${m.direction==='out'?' · '+esc(m.status||''):''}</time></div>`; }
 async function uploadMedia(file){
-  const ext=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,''); const path=`out/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+  const ext=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,''); const path=`out/${WS.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
   const { error } = await sb.storage.from('media').upload(path, file, { contentType: file.type||'application/octet-stream', upsert:false });
   if (error) throw new Error(error.message);
   return { url: sb.storage.from('media').getPublicUrl(path).data.publicUrl, mime: file.type||'application/octet-stream', name: file.name };
@@ -813,11 +1065,19 @@ async function loadThread(id, quiet){
   }
   threadKey=key; threadConv=id;
   const draft = box.querySelector('#reply')?.value || '';
-  box.innerHTML = `<header><div class="av" style="width:34px;height:34px;border-radius:50%;background:var(--chip);color:var(--brand-dk);display:grid;place-items:center;font-weight:700">${esc((c.name||'?')[0].toUpperCase())}</div><div><b>${esc(c.name)}</b><div class="muted" style="font-size:12px">${esc(c.phone)}${(c.tags||[]).length?' · '+c.tags.map(esc).join(', '):''}</div></div><div class="spacer"></div><span class="muted" style="font-size:12px">${windowOpen?'✅ Reply window open':'⏱ 24h window closed — template only'}</span></header>
+  box.innerHTML = `<header><div class="av" style="width:34px;height:34px;border-radius:50%;background:var(--chip);color:var(--brand-dk);display:grid;place-items:center;font-weight:700">${esc((c.name||'?')[0].toUpperCase())}</div><div style="min-width:0"><b>${esc(c.name)}</b><div class="muted" style="font-size:12px">${esc(c.phone)}${(c.tags||[]).length?' · '+c.tags.map(esc).join(', '):''}${c.opted_out?' · <span style="color:var(--danger)">opted out</span>':''}</div></div><div class="spacer"></div>
+      <div class="threadtools"><span class="muted" style="font-size:12px">${windowOpen?'✅ Window open':'⏱ Template only'}</span>
+        <select id="tAssign" title="Assign chat"><option value="">Unassigned</option>${MEMBERS.map(m=>`<option value="${m.user_id}" ${c.assigned_to===m.user_id?'selected':''}>${esc(m.user_id===ME.id?'Me':(m.email||'').split('@')[0])}</option>`).join('')}</select>
+        <button class="sm" id="tNote" title="Internal note, not sent to the customer">📝 Note</button>
+        <button class="sm" id="tStatus">${c.conv_status==='closed'?'Reopen':'✓ Close'}</button></div></header>
     <div class="msgs" id="msgs">${(msgs||[]).map(msgHtml).join('')||'<div class="empty">No messages yet.</div>'}</div>
     ${windowOpen ? `<div class="attachbar hidden" id="attachBar"></div><div class="compose"><button class="icon" id="attachBtn" title="Attach image, video, audio or document">📎</button><input type="file" id="attachFile" class="hidden" accept="image/*,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"><textarea id="reply" placeholder="Type a reply…">${esc(draft)}</textarea><button class="primary" id="sendReply">Send</button></div>`
       : `<div class="note">You can only send free-text replies within 24 hours of the contact's last message. Send an approved template instead:</div><div class="compose"><select id="replyTpl" style="flex:1"><option value="">Loading templates…</option></select><button class="primary" id="sendTpl">Send template</button></div>`}`;
   const m=$('msgs'); if (wasBottom) m.scrollTop=m.scrollHeight;
+  $('tAssign').onchange=async(e)=>{ const v=e.target.value||null; const { error } = await sb.from('contacts').update({assigned_to:v}).eq('id',id); if(error) return toast(error.message); toast(v?`Assigned to ${memberName(v)}`:'Unassigned'); loadInbox(); };
+  $('tStatus').onclick=async()=>{ const next=c.conv_status==='closed'?'open':'closed'; const { error } = await sb.from('contacts').update({conv_status:next, unread_count:0}).eq('id',id); if(error) return toast(error.message); toast(next==='closed'?'Chat closed':'Chat reopened'); threadKey=''; loadThread(id); loadInbox(); };
+  $('tNote').onclick=async()=>{ const t=prompt('Internal note (only your team sees this):'); if(!t||!t.trim()) return;
+    const { error } = await sb.from('messages').insert({ workspace_id: WS.id, contact_id:id, direction:'note', body:t.trim(), author_id: ME.id, source:'note', status:'note', msg_type:'note' }); if(error) return toast(error.message); threadKey=''; loadThread(id, true); };
   if (windowOpen) { let attached=null; // { file, previewUrl }
     const showAttach=()=>{ const bar=$('attachBar'); if(!attached){ bar.classList.add('hidden'); bar.innerHTML=''; return; }
       const f=attached.file; bar.classList.remove('hidden');
@@ -875,8 +1135,8 @@ async function loadBilling(){
           ? `<p class="muted" style="margin:0 0 8px">Meta bills this account directly. Charges appear in Meta's Billing hub as they accrue.</p>`
           : `<p class="err" style="margin:0 0 8px">No payment method on the WhatsApp account. Marketing/utility messages will fail until one is added — only free replies inside the 24-hour window work.</p>`}
         <div class="row">
-          <a href="https://business.facebook.com/billing_hub/accounts?business_id=1971674550040578&placement=whatsapp" target="_blank"><button class="primary">${b.hasPaymentMethod?'Manage in Meta Billing hub':'Add payment method in Meta'}</button></a>
-          <a href="https://business.facebook.com/billing_hub/payment_activity?business_id=1971674550040578" target="_blank"><button>Payment activity & invoices</button></a>
+          <a href="https://business.facebook.com/billing_hub/accounts?${b.businessId?'business_id='+b.businessId+'&':''}placement=whatsapp" target="_blank"><button class="primary">${b.hasPaymentMethod?'Manage in Meta Billing hub':'Add payment method in Meta'}</button></a>
+          <a href="https://business.facebook.com/billing_hub/payment_activity${b.businessId?'?business_id='+b.businessId:''}" target="_blank"><button>Payment activity & invoices</button></a>
           <span class="muted" style="font-size:12px">Account review: ${esc(a.account_review_status||'—')} · Business verification: ${esc(a.business_verification_status||'—')}${a.on_behalf_of_business_info?' · managed by partner '+esc(a.on_behalf_of_business_info.name||''):''}</span>
         </div>
       </div>
@@ -916,26 +1176,309 @@ $('mSubscribe').onclick=()=>mig('subscribe',{waba_id:$('mWaba').value.trim()}).t
 $('mStatus').onclick=()=>mig('status',{phone_number_id:$('mPhoneId').value.trim()}).catch(()=>{});
 
 // ---------- settings ----------
+let esInfo=null, esCode=null, fbReady=null;
+function loadFbSdk(appId){
+  if (fbReady) return fbReady;
+  fbReady = new Promise((resolve)=>{
+    window.fbAsyncInit = ()=>{ FB.init({ appId, autoLogAppEvents:true, xfbml:false, version:'v21.0' }); resolve(); };
+    const js=document.createElement('script'); js.src='https://connect.facebook.net/en_US/sdk.js'; js.async=true; js.crossOrigin='anonymous'; document.body.appendChild(js);
+  });
+  window.addEventListener('message', (event)=>{
+    if (!/facebook\.com$/.test(new URL(event.origin).hostname)) return;
+    try { const d = typeof event.data==='string' ? JSON.parse(event.data) : event.data;
+      if (d?.type==='WA_EMBEDDED_SIGNUP') {
+        if (/^FINISH/.test(d.event)) { esInfo = { waba_id:d.data?.waba_id, phone_number_id:d.data?.phone_number_id, coexistence: d.event==='FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING' }; finishEs(); }
+        else if (d.event==='CANCEL') toast('WhatsApp signup was cancelled'+(d.data?.current_step?` at "${d.data.current_step}"`:''));
+      } } catch {}
+  });
+  return fbReady;
+}
+async function finishEs(){
+  if (!esInfo || !esCode) return;
+  const body={ action:'es_exchange', code:esCode, ...esInfo }; esCode=null; esInfo=null;
+  $('connectOut').textContent='Connecting your number…';
+  try{ const r=await api('/api/workspace',{method:'POST',body}); $('connectOut').textContent='Connected: '+(r.phone?.display_phone_number||'')+'\n'+(r.steps||[]).join('\n'); toast('WhatsApp connected'); await refreshWorkspaces(); loadSetup(); }
+  catch(err){ $('connectOut').textContent='Error: '+err.message; }
+}
+async function startEs(es, coexist){
+  await loadFbSdk(es.appId);
+  FB.login((resp)=>{ if (resp.authResponse?.code) { esCode=resp.authResponse.code; finishEs(); } else toast('Facebook login was not completed'); },
+    { config_id: es.configId, response_type:'code', override_default_response_type:true, extras:{ setup:{}, featureType: coexist?'whatsapp_business_app_onboarding':'', sessionInfoVersion:'3' } });
+}
+async function refreshWorkspaces(){ const me=await api('/api/workspace'); WORKSPACES=me.workspaces||[]; const cur=WORKSPACES.find(w=>w.id===WS.id); if(cur){ WS=cur; $('wsName').textContent=WS.name; $('wsSub').textContent=WS.display_phone||'WhatsApp not connected'; } }
+
 async function loadSetup(){
-  const card=$('setupCard'); card.innerHTML='Checking connection…';
+  const card=$('setupCard'), cc=$('connectCard'); card.innerHTML='Checking connection…'; cc.innerHTML='';
   try{
     const s=await api('/api/setup');
-    const ok=(b)=>b?'<span class="status sent">set</span>':'<span class="status failed">missing</span>';
-    card.innerHTML=`
-      <h3 style="margin:0 0 8px">Meta connection</h3>
-      <div class="row" style="margin-bottom:6px">Access token ${ok(s.env.META_ACCESS_TOKEN)} Phone number ID ${ok(s.env.META_PHONE_NUMBER_ID)} WABA ID ${ok(s.env.META_WABA_ID)} Webhook token ${ok(s.env.META_WEBHOOK_VERIFY_TOKEN)}</div>
-      ${s.phone?`<div class="muted">Sending from <b>${esc(s.phone.display_phone_number)}</b> (${esc(s.phone.verified_name)}) · quality ${esc(s.phone.quality_rating)} · limit tier ${esc(s.phone.messaging_limit_tier||'—')}</div>`:''}
-      ${s.phoneError?`<div class="err">Phone check failed: ${esc(s.phoneError)}</div>`:''}
-      <h3 style="margin:18px 0 8px">Webhook (replies & delivery receipts)</h3>
-      <p class="muted" style="margin:0 0 8px">In <a href="https://developers.facebook.com/apps/1747765704025570/whatsapp-business/wa-settings/" target="_blank">Meta app → WhatsApp → Configuration</a>, set the callback URL and verify token below, then subscribe to the <b>messages</b> field. After that click "Subscribe app" here.</p>
-      <div class="row" style="margin-bottom:6px"><span style="width:110px">Callback URL</span><code class="k">${esc(s.webhookUrl)}</code></div>
-      <div class="row" style="margin-bottom:10px"><span style="width:110px">Verify token</span><code class="k">${esc(s.verifyToken||'(not set)')}</code></div>
-      <div class="row"><button id="btnSubscribe" class="primary">Subscribe app to WhatsApp account</button><span class="muted">Currently subscribed: ${s.subscribedApps?(s.subscribedApps.length?s.subscribedApps.map(esc).join(', '):'none'):(s.subscribeError?esc(s.subscribeError):'unknown')}</span></div>
-      <h3 style="margin:18px 0 8px">Manual trigger URL</h3>
-      <p class="muted" style="margin:0">Visiting <code class="k">${location.origin}/api/send-campaign?secret=…</code> sends the next batch of the oldest running campaign (useful for cron). The dashboard's Start button does this automatically.</p>`;
-    $('btnSubscribe').onclick=async()=>{ try{ await api('/api/setup',{method:'POST'}); toast('Subscribed'); loadSetup(); }catch(err){ toast(err.message); } };
+    // --- connect card ---
+    if (s.connected) {
+      cc.innerHTML=`<h3 style="margin:0 0 8px">WhatsApp number</h3>
+        ${s.phone?`<div class="kv"><span class="muted">Number</span><b>${esc(s.phone.display_phone_number)} · ${esc(s.phone.verified_name)}</b>
+          <span class="muted">Quality</span><span>${esc(s.phone.quality_rating||'—')}</span>
+          <span class="muted">Messaging limit</span><span>${esc(s.phone.messaging_limit_tier||'—')}</span>
+          <span class="muted">Display name status</span><span>${esc(s.phone.name_status||'—')}</span></div>`:''}
+        ${s.phoneError?`<div class="err">Phone check failed: ${esc(s.phoneError)}</div>`:''}
+        <div class="row" style="margin-top:12px"><button id="btnSubscribe">Re-subscribe webhooks</button><span class="muted" style="font-size:12px">Subscribed apps: ${s.subscribedApps?(s.subscribedApps.length?s.subscribedApps.map(esc).join(', '):'none'):(s.subscribeError?esc(s.subscribeError):'unknown')}</span>
+          <div class="spacer"></div>${ROLE==='owner'&&!s.workspace.uses_env_token?'<button class="danger sm" id="btnDisconnect">Disconnect</button>':''}</div>`;
+      $('btnSubscribe').onclick=async()=>{ try{ await api('/api/setup',{method:'POST'}); toast('Subscribed'); loadSetup(); }catch(err){ toast(err.message); } };
+      if ($('btnDisconnect')) $('btnDisconnect').onclick=async()=>{ if(!confirm('Disconnect this WhatsApp number from the workspace? Campaigns and automations will stop until you reconnect.')) return; try{ await api('/api/workspace',{method:'POST',body:{action:'disconnect'}}); await refreshWorkspaces(); loadSetup(); }catch(err){ toast(err.message); } };
+    } else {
+      const es=s.embeddedSignup;
+      cc.innerHTML=`<h3 style="margin:0 0 6px">Connect WhatsApp</h3>
+        <p class="muted" style="margin:0 0 12px">Connect your WhatsApp Business number to start sending. Meta bills message charges directly to your own WhatsApp account (card/UPI) — we never add a markup.</p>
+        ${es.ready?`<div class="row" style="margin-bottom:14px"><button class="primary" id="btnEs">Connect with Facebook</button><button id="btnEsCoex" title="Keep using the WhatsApp Business app on your phone with the same number">Use my existing WhatsApp Business app number</button></div>`
+          :`<div class="note" style="margin-bottom:12px;border-radius:8px">One-click "Connect with Facebook" will appear here once Meta approves this platform as a Tech Provider. Until then, connect manually below.</div>`}
+        <details ${es.ready?'':'open'}><summary style="cursor:pointer;font-weight:600">Connect manually (WABA ID + token)</summary>
+          <p class="muted" style="font-size:12.5px;margin:8px 0">In Meta Business Settings → System users, create a system user with full control of your WhatsApp account, generate a permanent token with <code class="k">whatsapp_business_messaging</code> and <code class="k">whatsapp_business_management</code>, then copy the IDs from WhatsApp Manager → Phone numbers.</p>
+          <div class="kv"><span>WhatsApp Business Account ID</span><input type="text" id="cWaba">
+          <span>Phone number ID</span><input type="text" id="cPhone">
+          <span>Permanent access token</span><input type="password" id="cToken" autocomplete="off"></div>
+          <div class="row" style="margin-top:10px"><button class="primary" id="btnManual">Connect</button></div>
+        </details>
+        <pre class="preview" id="connectOut" style="margin-top:10px;min-height:20px"></pre>`;
+      if ($('btnEs')) { $('btnEs').onclick=()=>startEs(es,false); $('btnEsCoex').onclick=()=>startEs(es,true); }
+      $('btnManual').onclick=async()=>{ $('connectOut').textContent='Checking with Meta…';
+        try{ const r=await api('/api/workspace',{method:'POST',body:{action:'connect_manual',waba_id:$('cWaba').value.trim(),phone_number_id:$('cPhone').value.trim(),access_token:$('cToken').value.trim()}});
+          $('cToken').value=''; $('connectOut').textContent='Connected: '+r.phone.display_phone_number+' ('+r.phone.verified_name+')\n'+(r.steps||[]).join('\n'); toast('WhatsApp connected'); await refreshWorkspaces(); loadSetup(); }
+        catch(err){ $('connectOut').textContent='Error: '+err.message; } };
+    }
+    // --- webhook card (platform owner only) ---
+    if (s.isPlatformAdmin) {
+      card.classList.remove('hidden');
+      card.innerHTML=`<h3 style="margin:0 0 8px">Platform webhook (Meta app)</h3>
+        <p class="muted" style="margin:0 0 8px">Set once in <a href="https://developers.facebook.com/apps/1747765704025570/whatsapp-business/wa-settings/" target="_blank">Meta app → WhatsApp → Configuration</a> and subscribe to <b>messages</b>. Every workspace's number is routed automatically.</p>
+        <div class="kv"><span>Callback URL</span><code class="k">${esc(s.webhookUrl)}</code><span>Verify token</span><code class="k">${esc(s.verifyToken||'(not set)')}</code>
+        <span>Embedded Signup</span><span>${s.embeddedSignup.ready?'<span class="status sent">configured</span>':'<span class="status PENDING">needs META_APP_ID, META_APP_SECRET, META_ES_CONFIG_ID in Vercel</span>'}</span></div>`;
+    } else card.classList.add('hidden');
+    // --- workspace card ---
+    $('wsCard').innerHTML=`<h3 style="margin:0 0 8px">Workspace</h3>
+      <div class="kv"><span>Business name</span><input type="text" id="wsNameIn" value="${esc(WS.name)}">
+      <span>Name used in messages</span><input type="text" id="wsStoreIn" value="${esc(WS.settings?.store_name||WS.name)}" placeholder="Shown as {{business}} / store name">
+      <span>Meta Business ID (for billing links)</span><input type="text" id="wsBizIn" value="${esc(WS.settings?.business_id||'')}" placeholder="optional">
+      <span>Plan</span><span><b>${esc(s.workspace.plan)}</b>${s.workspace.plan==='trial'&&s.workspace.trial_ends_at?' · ends '+fmtDate(s.workspace.trial_ends_at):''}</span></div>
+      <div class="row" style="margin-top:10px"><button class="primary sm" id="btnSaveWs">Save</button></div>`;
+    $('btnSaveWs').onclick=async()=>{ try{ await api('/api/workspace',{method:'POST',body:{action:'update',name:$('wsNameIn').value.trim(),settings:{store_name:$('wsStoreIn').value.trim(),business_id:$('wsBizIn').value.trim()}}}); toast('Saved'); await refreshWorkspaces(); }catch(err){ toast(err.message); } };
+    $('migrateCard').classList.toggle('hidden', !s.workspace.uses_env_token);
+    if (s.isPlatformAdmin) loadPlatform(); else $('platformCard').classList.add('hidden');
   }catch(err){ card.innerHTML=`<div class="err">${esc(err.message)}</div>`; }
 }
+async function loadPlatform(){
+  const el=$('platformCard'); el.classList.remove('hidden'); el.innerHTML='<h3 style="margin:0 0 8px">All customer workspaces</h3>Loading…';
+  try{ const r=await api('/api/workspace',{method:'POST',body:{action:'all_workspaces'}});
+    el.innerHTML=`<h3 style="margin:0 0 8px">All customer workspaces (${r.workspaces.length})</h3><div class="tablewrap"><table style="min-width:640px"><thead><tr><th>Workspace</th><th>Owner</th><th>Number</th><th>Contacts</th><th>Members</th><th>Plan</th><th>Status</th></tr></thead><tbody>${r.workspaces.map(w=>`<tr data-id="${w.id}"><td>${esc(w.name)}<div class="muted" style="font-size:11px">${fmtDate(w.created_at)}</div></td><td>${esc(w.owner||'')}</td><td>${esc(w.display_phone||'—')}</td><td>${w.contacts}</td><td>${w.members}</td>
+      <td><select class="pPlan" style="width:auto">${['trial','starter','pro','agency','internal'].map(p=>`<option ${p===w.plan?'selected':''}>${p}</option>`).join('')}</select>${w.plan==='trial'&&w.trial_ends_at?`<div class="muted" style="font-size:11px">ends ${fmtDate(w.trial_ends_at)}</div>`:''}</td>
+      <td><select class="pStatus" style="width:auto">${['active','suspended'].map(p=>`<option ${p===w.status?'selected':''}>${p}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`;
+    el.querySelectorAll('select').forEach(sel=>sel.onchange=async()=>{ const id=sel.closest('tr').dataset.id; const body={action:'set_plan',workspace_id:id}; body[sel.classList.contains('pPlan')?'plan':'status']=sel.value;
+      try{ await api('/api/workspace',{method:'POST',body}); toast('Updated'); }catch(err){ toast(err.message); } });
+  }catch(err){ el.innerHTML=`<div class="err">${esc(err.message)}</div>`; }
+}
+
+// ---------- team ----------
+async function loadTeam(){
+  await loadMembers();
+  const limits={trial:3,starter:3,pro:10,agency:50};
+  $('memberList').innerHTML = MEMBERS.map(m=>`<div class="crow" data-id="${m.user_id}"><div class="av">${esc((m.email||'?')[0].toUpperCase())}</div><div class="who"><b>${esc(m.email||m.user_id)}${m.user_id===ME.id?' (you)':''}</b><span>Joined ${fmtDate(m.created_at)}</span></div><div class="spacer"></div>
+    ${m.role==='owner'?'<span class="chip">Owner</span>':`<select class="mRole" style="width:auto">${['admin','agent'].map(r=>`<option ${r===m.role?'selected':''}>${r}</option>`).join('')}</select><button class="sm danger mRemove">Remove</button>`}</div>`).join('');
+  $('planNote').textContent = limits[WS.plan] ? `Your ${WS.plan} plan includes up to ${limits[WS.plan]} team members (${MEMBERS.length} used).` : '';
+}
+$('memberList').addEventListener('change', async e=>{ if(!e.target.classList.contains('mRole')) return; const uid=e.target.closest('.crow').dataset.id;
+  try{ await api('/api/workspace',{method:'POST',body:{action:'set_role',user_id:uid,role:e.target.value}}); toast('Role updated'); loadTeam(); }catch(err){ toast(err.message); loadTeam(); } });
+$('memberList').addEventListener('click', async e=>{ if(!e.target.classList.contains('mRemove')) return; const uid=e.target.closest('.crow').dataset.id; const m=MEMBERS.find(x=>x.user_id===uid);
+  if(!confirm(`Remove ${m?.email} from this workspace? Their assigned chats become unassigned.`)) return;
+  try{ await api('/api/workspace',{method:'POST',body:{action:'remove_member',user_id:uid}}); toast('Removed'); loadTeam(); }catch(err){ toast(err.message); } });
+$('btnInvite').onclick=()=>{ $('inviteForm').reset(); $('iErr').textContent=''; $('inviteModal').classList.remove('hidden'); };
+$('iCancel').onclick=()=>$('inviteModal').classList.add('hidden');
+$('inviteForm').addEventListener('submit', async e=>{ e.preventDefault(); $('iErr').textContent='';
+  try{ const r=await api('/api/workspace',{method:'POST',body:{action:'invite',email:$('iEmail').value.trim(),role:$('iRole').value}}); $('inviteModal').classList.add('hidden'); toast(r.note); loadTeam(); }
+  catch(err){ $('iErr').textContent=err.message; } });
+
+// ---------- chatbot ----------
+let RULES=[], editingRule=null, ruleMedia=null;
+const TRIGGER_LABEL={ welcome:'👋 Welcome', keyword:'🔑 Keyword', away:'🌙 Away', fallback:'↩️ Fallback', button:'🔘 Menu step' };
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function botCfg(){ return Object.assign({ enabled:true, handoff_minutes:60, business_hours:{ tz:'Asia/Kolkata', days:{1:[['09:30','18:30']],2:[['09:30','18:30']],3:[['09:30','18:30']],4:[['09:30','18:30']],5:[['09:30','18:30']],6:[['10:00','14:00']]} } }, WS.settings?.bot||{}); }
+async function loadBot(){
+  const { data } = await sb.from('bot_rules').select('*').eq('workspace_id', WS.id).order('priority').order('created_at');
+  RULES = data||[]; const cfg=botCfg();
+  $('botEnabled').checked = cfg.enabled!==false;
+  $('ruleEmpty').classList.toggle('hidden', RULES.length>0);
+  $('ruleList').innerHTML = RULES.map(r=>`<div class="card" data-id="${r.id}" style="${r.active?'':'opacity:.55'}">
+    <div class="row"><b>${esc(r.name)}</b><span class="chip">${TRIGGER_LABEL[r.trigger]||r.trigger}</span><div class="spacer"></div><label class="switch"><input type="checkbox" class="rActive" ${r.active?'checked':''}></label></div>
+    ${r.trigger==='keyword'?`<div class="muted" style="font-size:12px;margin-top:4px">${r.match==='exact'?'is exactly':r.match==='starts'?'starts with':'contains'}: ${(r.keywords||[]).map(k=>`<span class="chip">${esc(k)}</span>`).join(' ')}</div>`:''}
+    <div class="tpl">${r.reply?.media_url?'📎 '+esc(r.reply.media_name||'attachment')+'\n':''}${esc(r.reply?.text||'')}</div>
+    ${(r.reply?.buttons||[]).length?`<div class="row">${r.reply.buttons.map(b=>`<span class="chip">${esc(b.title)}${b.next_rule_id?' → '+esc(RULES.find(x=>x.id===b.next_rule_id)?.name||'?'):''}</span>`).join('')}</div>`:''}
+    <div class="row" style="margin-top:8px">${r.add_tag?`<span class="muted" style="font-size:12px">tags "${esc(r.add_tag)}"</span>`:''}${r.assign_to?`<span class="muted" style="font-size:12px">assigns to ${esc(memberName(r.assign_to))}</span>`:''}<div class="spacer"></div><button class="sm rEdit">Edit</button></div></div>`).join('');
+  // hours editor
+  const days=cfg.business_hours.days||{};
+  $('hoursGrid').innerHTML = [1,2,3,4,5,6,0].map(d=>{ const sl=(days[d]||days[String(d)]||[])[0]; return `<label style="margin:0" class="switch"><input type="checkbox" class="hOn" data-d="${d}" ${sl?'checked':''}> ${DAYS[d]}</label><div class="row"><input type="time" class="hS" data-d="${d}" value="${sl?sl[0]:'09:30'}"> to <input type="time" class="hE" data-d="${d}" value="${sl?sl[1]:'18:30'}"></div>`; }).join('');
+  $('handoffMin').value = cfg.handoff_minutes ?? 60;
+}
+async function saveBotSettings(patch){ await api('/api/workspace',{method:'POST',body:{action:'update',settings:{bot:patch}}}); await refreshWorkspaces(); }
+$('botEnabled').onchange=async(e)=>{ try{ await saveBotSettings({enabled:e.target.checked}); toast(e.target.checked?'Bot switched on':'Bot switched off — opt-out (STOP) still works'); }catch(err){ toast(err.message); } };
+$('btnSaveHours').onclick=async()=>{ const days={}; document.querySelectorAll('.hOn').forEach(cb=>{ const d=cb.dataset.d; if(cb.checked){ const s=document.querySelector(`.hS[data-d="${d}"]`).value, e=document.querySelector(`.hE[data-d="${d}"]`).value; if(s&&e&&s<e) days[d]=[[s,e]]; } });
+  try{ await saveBotSettings({ business_hours:{ tz:'Asia/Kolkata', days }, handoff_minutes: Math.max(0, parseInt($('handoffMin').value,10)||0) }); toast('Business hours saved'); }catch(err){ toast(err.message); } };
+$('ruleList').addEventListener('click', e=>{ const card=e.target.closest('.card'); if(!card) return; if(e.target.classList.contains('rEdit')) openRule(RULES.find(r=>r.id===card.dataset.id)); });
+$('ruleList').addEventListener('change', async e=>{ if(!e.target.classList.contains('rActive')) return; const id=e.target.closest('.card').dataset.id; const { error } = await sb.from('bot_rules').update({active:e.target.checked}).eq('id',id); if(error) toast(error.message); loadBot(); });
+$('btnAddRule').onclick=()=>openRule(null);
+$('rCancel').onclick=()=>$('ruleModal').classList.add('hidden');
+function ruleBtnRow(b={}){ const d=document.createElement('div'); d.className='btnrow';
+  d.innerHTML=`<input type="text" class="bTitle" maxlength="24" placeholder="Button text (max 20–24 chars)" value="${esc(b.title||'')}"><select class="bNext"><option value="">→ reply via keywords</option>${RULES.filter(r=>r.id!==editingRule?.id).map(r=>`<option value="${r.id}" ${b.next_rule_id===r.id?'selected':''}>→ ${esc(r.name)}</option>`).join('')}</select><button type="button" class="ghost sm bDel">✕</button>`;
+  d.querySelector('.bDel').onclick=()=>d.remove(); return d; }
+$('rAddBtn').onclick=()=>{ if($('rButtons').children.length>=10) return toast('Max 10 buttons'); $('rButtons').appendChild(ruleBtnRow()); };
+function syncRuleForm(){ $('rKwBox').classList.toggle('hidden', $('rTrigger').value!=='keyword'); }
+$('rTrigger').onchange=syncRuleForm;
+function openRule(r){
+  editingRule=r; ruleMedia=r?.reply?.media_url?{url:r.reply.media_url,mime:r.reply.media_mime,name:r.reply.media_name}:null;
+  $('ruleForm').reset(); $('rErr').textContent=''; $('ruleTitle').textContent=r?'Edit auto-reply':'New auto-reply';
+  $('rName').value=r?.name||''; $('rTrigger').value=r?.trigger||'keyword'; $('rKeywords').value=(r?.keywords||[]).join(', ');
+  document.querySelector(`input[name=rMatch][value="${r?.match||'contains'}"]`).checked=true;
+  $('rText').value=r?.reply?.text||''; $('rTag').value=r?.add_tag||''; $('rPriority').value=r?.priority??100;
+  $('rAssign').innerHTML='<option value="">— nobody —</option>'+MEMBERS.map(m=>`<option value="${m.user_id}" ${r?.assign_to===m.user_id?'selected':''}>${esc(m.email)}</option>`).join('');
+  $('rFileName').textContent=ruleMedia?('📎 '+(ruleMedia.name||'attachment')):''; $('rFile').value='';
+  $('rButtons').innerHTML=''; (r?.reply?.buttons||[]).forEach(b=>$('rButtons').appendChild(ruleBtnRow(b)));
+  $('rDelete').classList.toggle('hidden', !r); syncRuleForm(); $('ruleModal').classList.remove('hidden');
+}
+$('rFileClear').onclick=()=>{ ruleMedia=null; $('rFile').value=''; $('rFileName').textContent=''; };
+$('rDelete').onclick=async()=>{ if(!editingRule||!confirm(`Delete "${editingRule.name}"?`)) return; const { error } = await sb.from('bot_rules').delete().eq('id',editingRule.id); if(error) return toast(error.message); $('ruleModal').classList.add('hidden'); loadBot(); };
+$('ruleForm').addEventListener('submit', async e=>{ e.preventDefault(); $('rErr').textContent='';
+  const trigger=$('rTrigger').value, keywords=$('rKeywords').value.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean);
+  if (trigger==='keyword' && !keywords.length) return $('rErr').textContent='Add at least one keyword.';
+  const buttons=[...$('rButtons').querySelectorAll('.btnrow')].map(d=>({ title:d.querySelector('.bTitle').value.trim(), next_rule_id:d.querySelector('.bNext').value||null })).filter(b=>b.title);
+  if (buttons.length>3 && buttons.some(b=>b.title.length>24)) return $('rErr').textContent='Menu items can be at most 24 characters.';
+  if (buttons.length && buttons.length<=3 && buttons.some(b=>b.title.length>20)) return $('rErr').textContent='Button text can be at most 20 characters.';
+  try{
+    const f=$('rFile').files[0]; if (f) { if (f.size>16*1024*1024) return $('rErr').textContent='Attachment too large (max 16 MB).'; $('rErr').textContent='Uploading…'; ruleMedia=await uploadMedia(f); $('rErr').textContent=''; }
+    const text=$('rText').value.trim(); if(!text && !ruleMedia) return $('rErr').textContent='Write a reply or attach a file.';
+    if (buttons.length && ruleMedia) return $('rErr').textContent='WhatsApp buttons can only go with a text reply — remove the attachment or the buttons.';
+    const row={ workspace_id:WS.id, name:$('rName').value.trim(), trigger, keywords, match:document.querySelector('input[name=rMatch]:checked').value,
+      reply:{ type: ruleMedia?'media':(buttons.length?'buttons':'text'), text, buttons, ...(ruleMedia?{media_url:ruleMedia.url, media_mime:ruleMedia.mime, media_name:ruleMedia.name}:{}) },
+      add_tag: parseTags($('rTag').value)[0]||null, assign_to:$('rAssign').value||null, priority:parseInt($('rPriority').value,10)||100 };
+    const { error } = editingRule ? await sb.from('bot_rules').update(row).eq('id',editingRule.id) : await sb.from('bot_rules').insert(row);
+    if (error) return $('rErr').textContent=error.message;
+    $('ruleModal').classList.add('hidden'); toast('Saved'); loadBot();
+  }catch(err){ $('rErr').textContent=err.message; } });
+$('btnStarterRules').onclick=async()=>{
+  const biz=WS.settings?.store_name||WS.name;
+  const { data: menu, error } = await sb.from('bot_rules').insert({ workspace_id:WS.id, name:'Talk to a person', trigger:'button', reply:{type:'text', text:`Sure! A member of our team will reply here shortly.`, buttons:[]}, priority:50 }).select().single();
+  if (error) return toast(error.message);
+  const rows=[
+    { name:'Welcome message', trigger:'welcome', reply:{ type:'buttons', text:`Hi {{first_name}} 👋 Welcome to ${biz}! How can we help you today?`, buttons:[{title:'Prices', next_rule_id:null},{title:'Talk to a person', next_rule_id:menu.id}] }, priority:100 },
+    { name:'Away message', trigger:'away', reply:{ type:'text', text:`Thanks for messaging ${biz}! We're closed right now and will reply as soon as we're back.`, buttons:[] }, priority:100 },
+    { name:'Prices', trigger:'keyword', keywords:['price','prices','rate','cost'], match:'contains', reply:{ type:'text', text:'Here are our prices: (edit this reply in Chatbot → Prices)', buttons:[] }, priority:100 },
+  ].map(r=>({ workspace_id:WS.id, ...r }));
+  const { error: e2 } = await sb.from('bot_rules').insert(rows); if (e2) return toast(e2.message); toast('Starter replies added — edit them to match your business'); loadBot(); };
+
+// ---------- store automations ----------
+let STORES=[], AUTOS=[], editingStore=null, editingAuto=null;
+const EVENT_LABEL={ abandoned_cart:'🛒 Abandoned cart', order_created:'✅ Order placed', cod_confirmation:'💵 COD confirmation', order_shipped:'🚚 Shipped', order_delivered:'📦 Delivered', order_cancelled:'✖️ Cancelled' };
+const VAR_LABEL={ first_name:'First name', customer_name:'Customer name', order_number:'Order number', total:'Total amount', items:'Items', store_name:'Store name', courier:'Courier', tracking_number:'Tracking number', checkout_url:'Checkout link', order_url:'Order link', tracking_url:'Tracking link' };
+const goUrl = () => `${location.origin}/api/store?go={{1}}`;
+async function loadAutomations(){
+  const since=new Date(Date.now()-30*86400000).toISOString();
+  const [{ data: st }, { data: au }, { data: carts }, { data: jobs }] = await Promise.all([
+    sb.from('store_connections').select('*').eq('workspace_id', WS.id).order('created_at'),
+    sb.from('automations').select('*').eq('workspace_id', WS.id).order('event').order('delay_minutes'),
+    sb.from('store_events').select('kind,status,recovered,total,clicks').eq('workspace_id', WS.id).gte('created_at', since).limit(5000),
+    sb.from('automation_jobs').select('status').eq('workspace_id', WS.id).gte('created_at', since).limit(5000),
+  ]);
+  STORES=st||[]; AUTOS=au||[];
+  const cs=(carts||[]).filter(e=>e.kind==='cart'), rec=cs.filter(e=>e.recovered);
+  const recValue=rec.reduce((a,e)=>a+Number(e.total||0),0);
+  $('autoStats').innerHTML=`<div class="stat"><b>${cs.length}</b><span>Abandoned carts (30 days)</span></div><div class="stat"><b>${rec.length}</b><span>Recovered via WhatsApp</span></div>
+    <div class="stat"><b>${inr(recValue)}</b><span>Recovered revenue</span></div><div class="stat"><b>${(jobs||[]).filter(j=>j.status==='sent').length}</b><span>Automated messages sent</span></div>
+    <div class="stat"><b>${(carts||[]).reduce((a,e)=>a+(e.clicks||0),0)}</b><span>Link clicks</span></div>`;
+  $('storeList').innerHTML = STORES.length ? STORES.map(c=>`<div class="item" data-id="${c.id}"><div class="grow"><b>${esc(c.name)} <span class="chip">${esc(c.platform)}</span>${c.active?'':' <span class="chip">paused</span>'}</b>
+      <span>${c.last_event_at?'Last event '+ago(c.last_event_at)+' ago':'No events received yet'} · webhook <code class="k">${location.origin}/api/store?c=${c.id}${c.platform==='custom'?'&k=…':''}</code></span></div>
+      <button class="sm sTest">Send test</button><button class="sm sEdit">Settings</button></div>`).join('')
+    : '<div class="muted">No store connected yet.</div>';
+  $('autoList').innerHTML = AUTOS.length ? AUTOS.map(a=>`<div class="item" data-id="${a.id}"><div class="grow"><b>${EVENT_LABEL[a.event]||a.event} · ${esc(a.name)}</b><span>Template <b>${esc(a.template_name)}</b> · ${a.delay_minutes?'after '+fmtDelay(a.delay_minutes):'immediately'}</span></div>
+      <label class="switch"><input type="checkbox" class="aActive" ${a.active?'checked':''}> ${a.active?'On':'Off'}</label><button class="sm aEdit">Edit</button></div>`).join('')
+    : '<div class="muted">No automations yet — click "Create recommended templates" above, or add one.</div>';
+  loadEvents();
+}
+function fmtDelay(m){ return m%1440===0?`${m/1440} day${m===1440?'':'s'}`:m%60===0?`${m/60} hour${m===60?'':'s'}`:`${m} min`; }
+async function loadEvents(){
+  let q=sb.from('store_events').select('id,kind,status,order_number,customer_name,phone,total,currency,items,is_cod,cod_status,recovered,clicks,created_at').eq('workspace_id', WS.id).order('created_at',{ascending:false}).limit(30);
+  if ($('evFilter').value) q=q.eq('kind',$('evFilter').value);
+  const { data } = await q;
+  $('eventList').innerHTML = (data||[]).length ? `<div class="tablewrap"><table style="min-width:640px"><thead><tr><th>When</th><th>Type</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr></thead><tbody>${data.map(e=>`<tr><td>${fmtTime(e.created_at)}</td><td>${e.kind==='cart'?'Cart':'Order '+esc(e.order_number||'')}</td><td>${esc(e.customer_name||'')}<div class="muted" style="font-size:11px">${esc(e.phone||'no phone')}</div></td><td style="white-space:normal;max-width:220px">${esc(e.items||'')}</td><td>${e.total!=null?inr(e.total):''}</td>
+    <td><span class="status ${e.status==='completed'||e.status==='delivered'?'completed':e.status==='cancelled'?'failed':'PENDING'}">${esc(e.status)}</span>${e.recovered?' <span class="status sent">recovered</span>':''}${e.is_cod?` <span class="chip">COD ${esc(e.cod_status||'')}</span>`:''}${e.clicks?` <span class="muted" style="font-size:11px">${e.clicks} click${e.clicks===1?'':'s'}</span>`:''}</td></tr>`).join('')}</tbody></table></div>`
+    : '<div class="muted">Nothing yet. Once your store is connected, carts and orders appear here.</div>';
+}
+$('evFilter').onchange=loadEvents; $('btnRefreshAuto').onclick=loadAutomations;
+
+// stores
+const STORE_HELP={
+  shopify:(id)=>`<b>Shopify:</b> Settings → Notifications → scroll to <b>Webhooks</b> → Create webhook. Format <b>JSON</b>, URL:<br><code class="k">${location.origin}/api/store?c=${id||'(save first)'}</code><br>Create one webhook for each event: <b>Checkout creation</b>, <b>Checkout update</b>, <b>Order creation</b>, <b>Order update</b>, <b>Fulfillment creation</b>, <b>Fulfillment update</b>, <b>Order cancellation</b>.<br>Shopify shows "Your webhooks will be signed with <i>…</i>" under the list — paste that value below.<br><span class="muted">Phone numbers: in Shopify Settings → Checkout, set "Customer contact" to phone or email and make the phone field required for best results.</span>`,
+  woocommerce:(id,secret)=>`<b>WooCommerce:</b> WooCommerce → Settings → Advanced → Webhooks → Add webhook. Status <b>Active</b>, Topic <b>Order created</b>, Delivery URL:<br><code class="k">${location.origin}/api/store?c=${id||'(save first)'}</code><br>Secret: <code class="k">${secret||'(shown after saving)'}</code>. Add a second webhook with Topic <b>Order updated</b> (same URL and secret).<br><b>Abandoned carts:</b> install the free plugin "Cart Abandonment Recovery for WooCommerce", open its Settings → Webhook, enable it and use:<br><code class="k">${location.origin}/api/store?c=${id||'(save first)'}&k=${secret||'(secret)'}</code>`,
+  custom:(id,secret)=>`<b>Any website:</b> POST JSON to <code class="k">${location.origin}/api/store?c=${id||'(save first)'}&k=${secret||'(secret)'}</code><br>Example: <code class="k">{"event":"cart","id":"abc","name":"Riya","phone":"9848012345","items":"Saree x1","total":1299,"checkout_url":"https://…"}</code><br>Events: <code class="k">cart</code>, <code class="k">completed</code>, <code class="k">order</code> (add <code class="k">"cod":true</code>), <code class="k">shipped</code> (with <code class="k">tracking_url</code>, <code class="k">courier</code>), <code class="k">delivered</code>, <code class="k">cancelled</code>.`,
+};
+function syncStoreForm(){ const p=$('sPlatform').value;
+  $('sHelp').innerHTML=STORE_HELP[p](editingStore?.id, editingStore?.webhook_secret);
+  $('sSecretLabel').textContent = p==='shopify' ? 'Shopify webhook signing secret' : 'Webhook secret (generated — copy it into your store)';
+  $('sSecret').readOnly = p!=='shopify';
+  $('sKeyLabel').textContent = p==='shopify' ? 'Shopify Admin API access token (custom app with write_orders)' : 'WooCommerce consumer key (Read/Write)';
+  $('sSecret2Box').classList.toggle('hidden', p!=='woocommerce'); }
+$('sPlatform').onchange=syncStoreForm;
+function openStore(c){ editingStore=c; $('storeForm').reset(); $('sErr').textContent='';
+  $('sPlatform').value=c?.platform||'shopify'; $('sPlatform').disabled=!!c; $('sName').value=c?.name||WS.settings?.store_name||WS.name; $('sDomain').value=c?.shop_domain||''; $('sCc').value=c?.default_country_code||'91';
+  $('sSecret').value=c?.webhook_secret||''; $('sKey').value=c?.api_key||''; $('sApiSecret').value=c?.api_secret||'';
+  $('sDelete').classList.toggle('hidden',!c); syncStoreForm(); $('storeModal').classList.remove('hidden'); }
+$('btnAddStore').onclick=()=>openStore(null); $('sCancel').onclick=()=>$('storeModal').classList.add('hidden');
+$('storeList').addEventListener('click', async e=>{ const it=e.target.closest('.item'); if(!it) return; const c=STORES.find(x=>x.id===it.dataset.id);
+  if (e.target.classList.contains('sEdit')) openStore(c);
+  if (e.target.classList.contains('sTest')) { const phone=prompt('Send a test to which WhatsApp number? (with country code, e.g. 919876543210)'); if(!phone) return;
+    const kind=prompt('Which event? Type: order, cod, cart or shipped','order'); if(!kind) return;
+    try{ const r=await api('/api/store',{method:'POST',body:{action:'test_event',connection_id:c.id,phone,kind:kind==='cod'?'order':kind,cod:kind==='cod',name:'Test Customer'}});
+      toast(r.run.sent?`Sent ${r.run.sent} message(s) — check WhatsApp`:(r.results?.[0]?.scheduled?'Scheduled — check Recent activity':'No active automation for that event (turn one on first)')); loadAutomations(); }
+    catch(err){ toast(err.message); } } });
+$('sDelete').onclick=async()=>{ if(!editingStore||!confirm(`Remove ${editingStore.name}? Webhooks from it will be rejected.`)) return; const { error } = await sb.from('store_connections').delete().eq('id',editingStore.id); if(error) return toast(error.message); $('storeModal').classList.add('hidden'); loadAutomations(); };
+$('storeForm').addEventListener('submit', async e=>{ e.preventDefault(); $('sErr').textContent='';
+  const p=$('sPlatform').value; const row={ workspace_id:WS.id, platform:p, name:$('sName').value.trim(), shop_domain:$('sDomain').value.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'')||null, default_country_code:normPhone($('sCc').value)||'91', api_key:$('sKey').value.trim()||null, api_secret:$('sApiSecret').value.trim()||null };
+  if (p==='shopify') { if(!$('sSecret').value.trim() && editingStore) return $('sErr').textContent='Paste the Shopify webhook signing secret.'; if($('sSecret').value.trim()) row.webhook_secret=$('sSecret').value.trim(); }
+  const q = editingStore ? sb.from('store_connections').update(row).eq('id',editingStore.id) : sb.from('store_connections').insert(row);
+  const { data, error } = await q.select().single(); if (error) return $('sErr').textContent=error.message;
+  toast('Saved'); await loadAutomations(); if(!editingStore){ openStore(data); $('sErr').innerHTML='<span style="color:var(--ok)">Saved. Now follow the steps above in your store admin.</span>'; } else $('storeModal').classList.add('hidden'); });
+
+// automations
+$('btnInstallTpl').onclick=async()=>{ if(!confirm('Submit 5 recommended templates to Meta for approval and add matching automations (switched off until you turn them on)?')) return;
+  $('installOut').classList.remove('hidden'); $('installOut').textContent='Submitting to Meta…';
+  try{ const r=await api('/api/store',{method:'POST',body:{action:'install_recommended'}}); $('installOut').textContent=r.results.map(x=>`${x.name}: ${x.error?'❌ '+x.error:(x.status==='EXISTS'?'already exists':x.status||'submitted')}`).join('\n'); templates=[]; loadAutomations(); }
+  catch(err){ $('installOut').textContent='Error: '+err.message; } };
+$('autoList').addEventListener('change', async e=>{ if(!e.target.classList.contains('aActive')) return; const id=e.target.closest('.item').dataset.id; const a=AUTOS.find(x=>x.id===id);
+  if (e.target.checked) { try{ if(!templates.length) templates=(await api('/api/templates')).templates; }catch{} const t=templates.find(x=>x.name===a.template_name);
+    if (t && t.status!=='APPROVED') { e.target.checked=false; return toast(`Template "${t.name}" is ${t.status} — it must be APPROVED by Meta first`); } }
+  const { error } = await sb.from('automations').update({active:e.target.checked}).eq('id',id); if(error) toast(error.message); loadAutomations(); });
+$('autoList').addEventListener('click', e=>{ if(!e.target.classList.contains('aEdit')) return; openAuto(AUTOS.find(a=>a.id===e.target.closest('.item').dataset.id)); });
+$('btnAddAuto').onclick=()=>openAuto(null); $('aCancel').onclick=()=>$('autoModal').classList.add('hidden');
+async function openAuto(a){ editingAuto=a; $('autoForm').reset(); $('aErr').textContent=''; $('aTitle').textContent=a?'Edit automation':'New automation';
+  $('aEvent').value=a?.event||'abandoned_cart'; $('aName').value=a?.name||''; $('aActive').checked=!!a?.active; $('aGoUrl').textContent=goUrl();
+  const m=a?.delay_minutes??(a?0:60); const unit=m&&m%1440===0?1440:m&&m%60===0?60:1; $('aDelayUnit').value=String(unit); $('aDelay').value=m/unit;
+  $('aDelete').classList.toggle('hidden',!a); $('autoModal').classList.remove('hidden');
+  $('aTemplate').innerHTML='<option>Loading templates…</option>';
+  try{ if(!templates.length) templates=(await api('/api/templates')).templates; }catch(err){ $('aErr').textContent=err.message; }
+  $('aTemplate').innerHTML=templates.map(t=>`<option value="${esc(t.name)}|${esc(t.language)}" ${a&&a.template_name===t.name?'selected':''}>${esc(t.name)} (${esc(t.status)})</option>`).join('')||'<option value="">No templates</option>';
+  renderAutoParams(a); syncDelayHint(); }
+function renderAutoParams(a){ const [name]=($('aTemplate').value||'').split('|'); const t=templates.find(x=>x.name===name);
+  $('aPreview').classList.toggle('hidden',!t); if(t) $('aPreview').textContent=t.body+(t.buttons.length?'\n['+t.buttons.join('] [')+']':'');
+  const n=t?.body_params||0; const cur=a&&a.template_name===name?(a.params||[]):[];
+  const defaults=['first_name','order_number','total','store_name','items'];
+  $('aParams').innerHTML = n ? '<label>Fill the template variables with</label>'+Array.from({length:n},(_,i)=>`<div class="btnrow"><span style="width:44px">{{${i+1}}}</span><select class="aVar">${Object.entries(VAR_LABEL).map(([k,v])=>`<option value="${k}" ${(cur[i]||defaults[i])===k?'selected':''}>${v}</option>`).join('')}</select></div>`).join('') : '';
+  $('aUrlBox').classList.toggle('hidden', !t?.url_button_dynamic); if(a?.url_button_param) $('aUrlParam').value=a.url_button_param;
+  else $('aUrlParam').value = $('aEvent').value==='abandoned_cart'?'link_checkout':$('aEvent').value==='order_shipped'?'link_tracking':'link_order'; }
+function syncDelayHint(){ const ev=$('aEvent').value; $('aDelayHint').textContent = ev==='abandoned_cart'?'after the last cart activity (1 hour works well; add a 2nd reminder at 24 hours)':''; }
+$('aTemplate').onchange=()=>renderAutoParams(editingAuto); $('aEvent').onchange=()=>{ syncDelayHint(); renderAutoParams(editingAuto); };
+$('aDelete').onclick=async()=>{ if(!editingAuto||!confirm('Delete this automation?')) return; const { error } = await sb.from('automations').delete().eq('id',editingAuto.id); if(error) return toast(error.message); $('autoModal').classList.add('hidden'); loadAutomations(); };
+$('autoForm').addEventListener('submit', async e=>{ e.preventDefault(); $('aErr').textContent='';
+  const [template_name, template_language]=($('aTemplate').value||'').split('|'); if(!template_name) return $('aErr').textContent='Choose a template.';
+  const t=templates.find(x=>x.name===template_name);
+  if ($('aActive').checked && t && t.status!=='APPROVED') return $('aErr').textContent=`"${t.name}" is ${t.status} — save it switched off and turn it on after Meta approves it.`;
+  if ($('aEvent').value==='cod_confirmation' && t && t.quick_replies<2) return $('aErr').textContent='COD confirmation needs a template with two quick-reply buttons (Confirm / Cancel).';
+  const row={ workspace_id:WS.id, event:$('aEvent').value, name:$('aName').value.trim(), template_name, template_language, params:[...document.querySelectorAll('.aVar')].map(s=>s.value),
+    url_button_param: t?.url_button_dynamic ? $('aUrlParam').value : null, delay_minutes: Math.max(0, Math.round((parseFloat($('aDelay').value)||0)*parseInt($('aDelayUnit').value,10))), active:$('aActive').checked };
+  const { error } = editingAuto ? await sb.from('automations').update(row).eq('id',editingAuto.id) : await sb.from('automations').insert(row);
+  if (error) return $('aErr').textContent=error.message; $('autoModal').classList.add('hidden'); toast('Saved'); loadAutomations(); });
 </script>
 </body>
 </html>
