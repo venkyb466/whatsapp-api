@@ -37,13 +37,16 @@ export default async function handler(req, res) {
         bodyText = text; msgType = 'text';
       }
     }
-    const msg = await logOutbound(ws, contact.id, msgId, { type: msgType, body: bodyText, source: 'manual', authorId: auth.user.id, media });
     // A human is now handling this chat: pause the bot, and claim the chat if nobody owns it.
     const cfg = botSettings(ws);
     const patch = { bot_state: { ...(contact.bot_state || {}), paused_until: new Date(Date.now() + cfg.handoff_minutes * 60000).toISOString() } };
     if (!contact.assigned_to) patch.assigned_to = auth.user.id;
     if (contact.conv_status === 'closed') patch.conv_status = 'open';
-    await db.from('contacts').update(patch).eq('id', contact.id);
+    // Save the message and update the chat in parallel so the reply comes back faster.
+    const [msg] = await Promise.all([
+      logOutbound(ws, contact.id, msgId, { type: msgType, body: bodyText, source: 'manual', authorId: auth.user.id, media }),
+      db.from('contacts').update(patch).eq('id', contact.id),
+    ]);
     return json(res, 200, { ok: true, message: msg });
   } catch (err) {
     return json(res, 502, { error: err.message, details: err.meta || null });
