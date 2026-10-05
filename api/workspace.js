@@ -163,6 +163,33 @@ export default async function handler(req, res) {
         return json(res, 200, out);
       }
 
+      case 'relink_env': {
+        // Platform owner workspace: re-attach the number after it was re-added in WhatsApp Manager (new phone number ID).
+        if (m.role !== 'owner') return json(res, 403, { error: 'Only the owner can do this' });
+        if (!ws.uses_env_token || !process.env.META_ACCESS_TOKEN) return json(res, 400, { error: 'Only for the platform owner workspace' });
+        const token = process.env.META_ACCESS_TOKEN, wabaId = ws.waba_id || process.env.META_WABA_ID;
+        const list = await graph(`${wabaId}/phone_numbers?fields=id,display_phone_number,verified_name,code_verification_status,platform_type,status,name_status`, { token });
+        const want = String(b.phone || ws.display_phone || '').replace(/\D/g, '');
+        const nums = list.data || [];
+        const n = nums.find((x) => String(x.display_phone_number).replace(/\D/g, '') === want) || (nums.length === 1 ? nums[0] : null);
+        if (!n) return json(res, 404, { error: 'Number not found on the WhatsApp Business Account', numbers: nums });
+        if (b.dry) return json(res, 200, { number: n });
+        const steps = [];
+        let pin = null;
+        if (n.platform_type !== 'CLOUD_API') {
+          pin = /^\d{6}$/.test(String(b.pin || '')) ? String(b.pin) : String(Math.floor(100000 + Math.random() * 900000));
+          try { await graph(`${n.id}/register`, { method: 'POST', token, body: { messaging_product: 'whatsapp', pin } }); steps.push('registered'); }
+          catch (e) { steps.push(`register failed: ${e.message}`); }
+        } else steps.push('already on Cloud API');
+        try { await graph(`${wabaId}/subscribed_apps`, { method: 'POST', token }); steps.push('webhooks subscribed'); }
+        catch (e) { steps.push(`subscribe failed: ${e.message}`); }
+        await db.from('workspace_secrets').delete().eq('workspace_id', wsId);
+        const settings = { ...(ws.settings || {}) }; delete settings.coexistence; delete settings.coexistence_since;
+        await db.from('workspaces').update({ waba_id: wabaId, phone_number_id: n.id, display_phone: n.display_phone_number, verified_name: n.verified_name, settings }).eq('id', wsId);
+        invalidateWorkspace(wsId);
+        return json(res, 200, { ok: true, number: n, pin, steps });
+      }
+
       case 'disconnect': {
         if (m.role !== 'owner') return json(res, 403, { error: 'Only the owner can disconnect WhatsApp' });
         if (ws.uses_env_token) return json(res, 400, { error: 'The platform owner workspace is connected through server settings' });
