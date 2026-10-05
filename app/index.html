@@ -1080,7 +1080,7 @@ function mediaHtml(url, mime, name){ if(!url) return ''; mime=mime||'';
   if (mime.startsWith('video/')) return `<video class="media" controls preload="metadata" src="${esc(url)}"></video>`;
   if (mime.startsWith('audio/')) return `<audio controls preload="metadata" src="${esc(url)}" style="max-width:100%"></audio>`;
   return `<a class="doc" href="${esc(url)}" target="_blank" rel="noopener">📄 ${esc(name||'Document')}</a>`; }
-const SRC_LABEL = { bot:'🤖 Bot', automation:'🛒 Automation', campaign:'📣 Campaign' };
+const SRC_LABEL = { bot:'🤖 Bot', automation:'🛒 Automation', campaign:'📣 Campaign', phone:'📱 Phone' };
 function msgHtml(m){
   if (m.direction==='note') return `<div class="msg note" data-id="${m.id}"><span class="src">📝 Note · ${esc(memberName(m.author_id)||'team')}</span><br>${esc(m.body)}<time>${fmtTime(m.sent_at)}</time></div>`;
   const src = m.direction==='out' ? (SRC_LABEL[m.source] || (m.author_id ? esc(memberName(m.author_id)) : '')) : '';
@@ -1272,6 +1272,15 @@ async function loadSetup(){
         ${s.phoneError?`<div class="err">Phone check failed: ${esc(s.phoneError)}</div>`:''}
         <div class="row" style="margin-top:12px"><button id="btnSubscribe">Re-subscribe webhooks</button><span class="muted" style="font-size:12px">Subscribed apps: ${s.subscribedApps?(s.subscribedApps.length?s.subscribedApps.map(esc).join(', '):'none'):(s.subscribeError?esc(s.subscribeError):'unknown')}</span>
           <div class="spacer"></div>${ROLE==='owner'&&!s.workspace.uses_env_token?'<button class="danger sm" id="btnDisconnect">Disconnect</button>':''}</div>`;
+      if (ROLE==='owner') { const coex=WS.settings?.coexistence; const box=document.createElement('div'); box.style.cssText='margin-top:14px;padding-top:12px;border-top:1px solid var(--line,#e5e7eb)';
+        box.innerHTML = coex
+          ? `<b>📱 Coexistence on</b><div class="muted" style="font-size:12.5px;margin-top:4px">This number also works in the WhatsApp Business app on your phone. Chats sent from the phone appear here too.</div>`
+          : `<b>Use this number in the WhatsApp Business app too</b><div class="muted" style="font-size:12.5px;margin:4px 0 8px">First move the number to the WhatsApp Business app on your phone, then connect it here. Your phone chats (last 6 months) and contacts sync into this inbox.</div>
+             ${s.embeddedSignup?.ready?'<button id="btnCoex">Connect WhatsApp Business app (Coexistence)</button>':'<span class="status PENDING">needs META_APP_ID, META_APP_SECRET, META_ES_CONFIG_ID in Vercel</span>'}`;
+        cc.appendChild(box);
+        if ($('btnCoex')) $('btnCoex').onclick=()=>{ if(!confirm('Connect the number that is now on the WhatsApp Business app on your phone? You will log in with Facebook and scan a QR code in the WhatsApp Business app.')) return;
+          if(!$('connectOut')){ const pre=document.createElement('pre'); pre.className='preview'; pre.id='connectOut'; pre.style.marginTop='10px'; cc.appendChild(pre); }
+          startEs(s.embeddedSignup,true); }; }
       $('btnSubscribe').onclick=async()=>{ try{ await api('/api/setup',{method:'POST'}); toast('Subscribed'); loadSetup(); }catch(err){ toast(err.message); } };
       if ($('btnDisconnect')) $('btnDisconnect').onclick=async()=>{ if(!confirm('Disconnect this WhatsApp number from the workspace? Campaigns and automations will stop until you reconnect.')) return; try{ await api('/api/workspace',{method:'POST',body:{action:'disconnect'}}); await refreshWorkspaces(); loadSetup(); }catch(err){ toast(err.message); } };
     } else {
