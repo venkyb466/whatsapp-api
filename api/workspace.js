@@ -150,6 +150,14 @@ export default async function handler(req, res) {
             catch (e) { out.steps.push(`${sync_type} sync failed: ${e.message}`); }
           }
           await db.from('workspaces').update({ settings: { ...(ws.settings || {}), coexistence: true, coexistence_since: new Date().toISOString() } }).eq('id', wsId);
+          // The Embedded Signup token expires in 60 days. If the platform's permanent token can reach this number, use that instead.
+          if (ws.uses_env_token && process.env.META_ACCESS_TOKEN) {
+            try {
+              await graph(`${b.phone_number_id}?fields=id`, { token: process.env.META_ACCESS_TOKEN });
+              await db.from('workspace_secrets').delete().eq('workspace_id', wsId);
+              out.steps.push('using the permanent platform token');
+            } catch (e) { out.steps.push('kept the 60-day signup token (permanent token has no access to this number yet): ' + e.message); }
+          }
           invalidateWorkspace(wsId);
         }
         return json(res, 200, out);
