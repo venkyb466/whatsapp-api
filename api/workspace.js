@@ -143,6 +143,15 @@ export default async function handler(req, res) {
         const tok = await fetch(`https://graph.facebook.com/v21.0/oauth/access_token?client_id=${appId}&client_secret=${encodeURIComponent(secret)}&code=${encodeURIComponent(b.code)}`).then((r) => r.json());
         if (!tok.access_token) return json(res, 400, { error: tok.error?.message || 'Could not exchange the code with Meta' });
         const out = await connect(wsId, { wabaId: String(b.waba_id), phoneId: String(b.phone_number_id), token: tok.access_token, register: !b.coexistence, pin: b.pin });
+        if (b.coexistence) {
+          // Number stays on the WhatsApp Business app: ask Meta to send contacts + chat history (must happen within 24h of onboarding).
+          for (const sync_type of ['smb_app_state_sync', 'history']) {
+            try { await graph(`${b.phone_number_id}/smb_app_data`, { method: 'POST', token: tok.access_token, body: { messaging_product: 'whatsapp', sync_type } }); out.steps.push(`${sync_type === 'history' ? 'chat history' : 'contacts'} sync requested`); }
+            catch (e) { out.steps.push(`${sync_type} sync failed: ${e.message}`); }
+          }
+          await db.from('workspaces').update({ settings: { ...(ws.settings || {}), coexistence: true, coexistence_since: new Date().toISOString() } }).eq('id', wsId);
+          invalidateWorkspace(wsId);
+        }
         return json(res, 200, out);
       }
 

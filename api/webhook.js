@@ -1,7 +1,7 @@
 // Meta WhatsApp webhook.
 //   GET  -> verification handshake (Meta calls this once when you save the callback URL)
 //   POST -> incoming messages + delivery status updates, routed to the workspace that owns the phone number
-import { db, json, storeInboundMedia, workspaceByPhoneId, getWorkspace, DEFAULT_WS } from './_lib.js';
+import { db, json, storeInboundMedia, workspaceByPhoneId, getWorkspace, DEFAULT_WS, upsertContact } from './_lib.js';
 import { handleInboundBot, inboundPayload } from './_bot.js';
 import { handleCodReply } from './_store.js';
 import crypto from 'node:crypto';
@@ -51,6 +51,12 @@ export default async function handler(req, res) {
         for (const s of v.statuses || []) {
           try { await handleStatus(s); } catch (err) { console.error('status error', err); }
         }
+        // ---- Coexistence (number also used in the WhatsApp Business app on the phone) ----
+        for (const m of v.message_echoes || []) {
+          try { await handleEcho(ws, m); } catch (err) { console.error('echo error', err); }
+        }
+        if (v.history) { try { await handleHistory(ws, v); } catch (err) { console.error('history error', err); } }
+        if (v.state_sync) { try { await handleStateSync(ws, v.state_sync); } catch (err) { console.error('state sync error', err); } }
       }
     }
   } catch (err) {
@@ -152,4 +158,74 @@ async function handleStatus(s) {
     await db.from('messages').update({ status }).eq('id', msg.id);
   }
   if (status === 'failed' && errMsg) await db.from('automation_jobs').update({ status: 'failed', error: errMsg }).eq('wa_message_id', s.id);
+}
+
+
+// ---------- Coexistence helpers ----------
+const digits = (x) => String(x || '').replace(/\D/g, '');
+
+async function contactFor(ws, phone, name) {
+  phone = digits(phone); if (!phone) return null;
+  const { data: c } = await db.from('contacts').select('*').eq('workspace_id', ws.id).eq('phone', phone).maybeSingle();
+  if (c) return c;
+  const { data: created } = await db.from('contacts').insert({ workspace_id: ws.id, phone, name: name || phone, tags: ['whatsapp-app'] }).select('*').single();
+  if (created) return created;
+  const { data: again } = await db.from('contacts').select('*').eq('workspace_id', ws.id).eq('phone', phone).maybeSingle();
+  return again;
+}
+
+// A message the business sent from the WhatsApp Business app on the phone -> show it in the inbox as outgoing.
+async function handleEcho(ws, m) {
+  const { data: dup } = await db.from('messages').select('id').eq('wa_message_id', m.id).maybeSingle();
+  if (dup) return;
+  const contact = await contactFor(ws, m.to);
+  if (!contact) return;
+  const ts = new Date(Number(m.timestamp) * 1000).toISOString();
+  const row = { workspace_id: ws.id, contact_id: contact.id, direction: 'out', wa_message_id: m.id, msg_type: m.type || 'text', body: describe(m), status: 'sent', sent_at: ts, source: 'phone' };
+  const media = m.image || m.video || m.audio || m.document || m.sticker;
+  if (media?.id && ws.token) {
+    try {
+      const stored = await storeInboundMedia(ws, media.id, { contactId: contact.id, messageId: m.id, filename: m.document?.filename });
+      row.media_url = stored.url; row.media_mime = stored.mime; row.media_name = stored.name;
+      row.body = media.caption || (m.type === 'document' ? (m.document?.filename || '') : '');
+    } catch (err) { console.error('echo media failed', err.message); }
+  }
+  const { error } = await db.from('messages').insert(row);
+  if (error && !/duplicate/i.test(error.message)) console.error('echo insert failed', error.message);
+  await db.from('contacts').update({ last_message_at: ts }).eq('id', contact.id);
+}
+
+// Chat history shared from the phone app (up to 180 days), delivered in chunks right after onboarding.
+async function handleHistory(ws, v) {
+  const bizNumber = digits(v.metadata?.display_phone_number);
+  for (const chunk of v.history || []) {
+    for (const thread of chunk.threads || []) {
+      const contact = await contactFor(ws, thread.id);
+      if (!contact) continue;
+      const rows = []; let last = null;
+      for (const m of thread.messages || []) {
+        const ts = new Date(Number(m.timestamp) * 1000).toISOString();
+        const out = bizNumber ? digits(m.from) === bizNumber : digits(m.from) !== digits(thread.id);
+        const st = m.history_context?.status;
+        rows.push({ workspace_id: ws.id, contact_id: contact.id, direction: out ? 'out' : 'in', wa_message_id: m.id, msg_type: m.type || 'text',
+          body: describe(m), status: out ? (st === 'READ' ? 'read' : st === 'DELIVERED' ? 'delivered' : 'sent') : 'received', sent_at: ts, source: out ? 'phone' : 'customer' });
+        if (!last || ts > last) last = ts;
+      }
+      for (let i = 0; i < rows.length; i += 200) {
+        const { error } = await db.from('messages').upsert(rows.slice(i, i + 200), { onConflict: 'wa_message_id', ignoreDuplicates: true });
+        if (error) console.error('history insert failed', error.message);
+      }
+      if (last && (!contact.last_message_at || last > contact.last_message_at)) await db.from('contacts').update({ last_message_at: last }).eq('id', contact.id);
+    }
+  }
+}
+
+// Contacts saved in the phone app -> add them to Contacts.
+async function handleStateSync(ws, items) {
+  for (const it of items || []) {
+    if (it.type !== 'contact' || !it.contact?.phone_number) continue;
+    if (it.action === 'remove') continue;
+    try { await upsertContact(ws.id, it.contact.phone_number, { name: it.contact.full_name || it.contact.first_name, tags: ['phone-contact'] }); }
+    catch (err) { console.error('contact sync failed', err.message); }
+  }
 }
