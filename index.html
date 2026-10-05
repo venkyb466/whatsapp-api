@@ -156,6 +156,9 @@
   .msg{max-width:70%;padding:8px 10px;border-radius:10px;background:#fff;font-size:13px;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 0 rgba(0,0,0,.06)}
   .msg.out{align-self:flex-end;background:#d9fdd3}
   .msg time{display:block;font-size:10px;color:var(--muted);text-align:right;margin-top:3px}
+  .msg .tick{margin-left:4px;font-size:11px;letter-spacing:-3px;color:var(--muted)} .msg .tick.read{color:#34B7F1} .msg .tick.failed{color:#e5484d;letter-spacing:0}
+  .msg.new{animation:msgIn .18s ease-out} @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  #msgs{scroll-behavior:auto} #reply{resize:none;overflow-y:auto;max-height:160px}
   .compose{background:#fff;border-top:1px solid var(--line);padding:10px;display:flex;gap:8px;align-items:flex-end}
   .compose textarea{min-height:40px;max-height:120px}
   .msg .media{display:block;max-width:100%;max-height:320px;border-radius:8px;margin-bottom:4px;object-fit:contain;background:#00000010}
@@ -756,19 +759,56 @@ function showView(v){
   if (v==='billing') loadBilling();
   if (v==='campaigns') loadCampaigns();
   if (v==='templates') loadTemplates();
-  if (v==='inbox') { loadInbox(); inboxTimer = setInterval(loadInbox, 15000); startRealtime(); warmSend(); }
+  if (v==='inbox') { loadInbox(); inboxTimer = setInterval(()=>loadInbox(false), 60000); startRealtime(); warmSend(); }
   if (v==='settings') loadSetup();
   if (v==='automations') loadAutomations();
   if (v==='chatbot') loadBot();
   if (v==='team') loadTeam();
 }
 // Realtime: new/updated messages push instantly instead of waiting for the poll.
-let rtChannel = null, rtDebounce = null;
+let rtChannel = null, rtDebounce = null, rtLive = false;
+// Live message arrived: drop it into the open chat (no reload) and refresh just the chat list.
+function liveInsert(m){
+  if (!m) return;
+  if (m.contact_id === activeConv && $('msgs')) appendMsg(m);
+  clearTimeout(rtDebounce); rtDebounce = setTimeout(()=>loadInbox(true), 400);
+}
+// Status change (sent → delivered → read): update only that bubble's ticks.
+function liveUpdate(m){
+  if (!m || m.contact_id !== activeConv) return;
+  const el = document.querySelector(`#msgs .msg[data-id="${m.id}"]`); if (!el) return;
+  const cur = el.dataset.status || 'sent';
+  if ((TICK_RANK[m.status]||0) < (TICK_RANK[cur]||0) && m.status!=='failed') return;
+  el.dataset.status = m.status || cur;
+  const t = el.querySelector('.tick'); if (t) t.outerHTML = tickHtml(m.status);
+}
+function nearBottom(mm){ return mm.scrollTop + mm.clientHeight >= mm.scrollHeight - 80; }
+// Add one message to the open thread. If it's our own pending bubble coming back, turn that bubble into the real one.
+function appendMsg(m){
+  const mm = $('msgs'); if (!mm) return;
+  if (mm.querySelector(`.msg[data-id="${m.id}"]`)) return;
+  if (m.direction === 'out') {
+    const pend = [...mm.querySelectorAll('.msg.pending')].find(b => (b.dataset.text||'') === (m.body||'') );
+    if (pend) { claimBubble(pend, m); return; }
+  }
+  const stick = nearBottom(mm);
+  mm.querySelector('.empty')?.remove();
+  const tmp = document.createElement('div'); tmp.innerHTML = msgHtml(m); const el = tmp.firstElementChild;
+  el.classList.add('new'); el.dataset.status = m.status || ''; mm.appendChild(el);
+  if (stick || m.direction==='out') mm.scrollTop = mm.scrollHeight;
+  threadKey = '';
+}
+// Turn an optimistic bubble into the stored message, in place (keeps local image preview, no flicker).
+function claimBubble(b, m){
+  b.classList.remove('pending','failed'); b.dataset.id = m.id; b.dataset.status = m.status || 'sent';
+  const t = b.querySelector('time'); if (t) t.innerHTML = fmtTime(m.sent_at) + tickHtml(m.status||'sent');
+}
 function startRealtime(){
   if (rtChannel) return;
   rtChannel = sb.channel('inbox-live-'+WS.id)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: 'workspace_id=eq.'+WS.id }, () => { clearTimeout(rtDebounce); rtDebounce = setTimeout(loadInbox, 250); })
-    .subscribe();
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'workspace_id=eq.'+WS.id }, p => { liveInsert(p.new); })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'workspace_id=eq.'+WS.id }, p => { liveUpdate(p.new); })
+    .subscribe(st => { rtLive = st === 'SUBSCRIBED'; });
 }
 // Keep the send function warm so the first reply doesn't wait on a cold start.
 let warmTimer = null;
@@ -1016,7 +1056,7 @@ $('campaignForm').addEventListener('submit', async e=>{
 
 // ---------- inbox ----------
 async function refreshUnread(){ if(!WS) return; const { data } = await sb.from('contacts').select('unread_count').eq('workspace_id', WS.id).gt('unread_count',0); const n=(data||[]).reduce((a,c)=>a+c.unread_count,0); $('unreadBadge').textContent=n; $('unreadBadge').classList.toggle('hidden',n===0); }
-async function loadInbox(){
+async function loadInbox(listOnly){
   if (!WS) return;
   let q = sb.from('contacts').select('id,name,phone,last_message_at,last_inbound_at,unread_count,assigned_to,conv_status').eq('workspace_id', WS.id).not('last_message_at','is',null);
   if (convFilter==='closed') q=q.eq('conv_status','closed'); else q=q.neq('conv_status','closed');
@@ -1028,7 +1068,7 @@ async function loadInbox(){
   const convs=data||[];
   $('convs').innerHTML = convs.length ? convs.map(c=>`<div class="conv ${activeConv===c.id?'active':''}" data-id="${c.id}"><div class="av">${esc((c.name||'?')[0].toUpperCase())}</div><div class="meta"><b>${esc(c.name)}</b><span>${esc(c.phone)} · ${ago(c.last_message_at)}${c.assigned_to?`<span class="who2">${esc(memberName(c.assigned_to)||'assigned')}</span>`:''}</span></div>${c.unread_count?`<span class="unread">${c.unread_count}</span>`:''}</div>`).join('')
     : `<div class="empty" style="border:0">${convFilter==='mine'?'No chats assigned to you.':convFilter==='unassigned'?'No unassigned chats.':convFilter==='closed'?'No closed chats.':'No conversations yet.<br><small>Replies from contacts appear here once WhatsApp is connected.</small>'}</div>`;
-  refreshUnread(); if (activeConv) loadThread(activeConv, true);
+  refreshUnread(); if (activeConv && !listOnly && !rtLive) loadThread(activeConv, true);
 }
 $('convFilter').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; convFilter=b.dataset.f; document.querySelectorAll('#convFilter button').forEach(x=>x.classList.toggle('active',x===b)); loadInbox(); });
 let convSearchT=null; $('convSearch').addEventListener('input', ()=>{ clearTimeout(convSearchT); convSearchT=setTimeout(loadInbox,250); });
@@ -1044,7 +1084,12 @@ const SRC_LABEL = { bot:'🤖 Bot', automation:'🛒 Automation', campaign:'📣
 function msgHtml(m){
   if (m.direction==='note') return `<div class="msg note" data-id="${m.id}"><span class="src">📝 Note · ${esc(memberName(m.author_id)||'team')}</span><br>${esc(m.body)}<time>${fmtTime(m.sent_at)}</time></div>`;
   const src = m.direction==='out' ? (SRC_LABEL[m.source] || (m.author_id ? esc(memberName(m.author_id)) : '')) : '';
-  return `<div class="msg ${m.direction}" data-id="${m.id}">${src?`<span class="src">${src}</span><br>`:''}${mediaHtml(m.media_url,m.media_mime,m.media_name)}${m.body?esc(m.body):''}<time>${fmtTime(m.sent_at)}${m.direction==='out'?' · '+esc(m.status||''):''}</time></div>`; }
+  return `<div class="msg ${m.direction}" data-id="${m.id}">${src?`<span class="src">${src}</span><br>`:''}${mediaHtml(m.media_url,m.media_mime,m.media_name)}${m.body?esc(m.body):''}<time>${fmtTime(m.sent_at)}${m.direction==='out'?tickHtml(m.status):''}</time></div>`; }
+const TICK_RANK={pending:0,sent:1,delivered:2,read:3,failed:9};
+function tickHtml(st){ st=st||'sent'; if(st==='failed') return '<span class="tick failed" title="Failed">⚠</span>';
+  if(st==='pending') return '<span class="tick" title="Sending">🕓</span>';
+  return `<span class="tick ${st==='read'?'read':''}" title="${st}">${st==='sent'?'✓':'✓✓'}</span>`; }
+function autoGrow(){ const ta=$('reply'); if(!ta) return; ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,160)+'px'; }
 async function uploadMedia(file){
   const ext=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,''); const path=`out/${WS.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
   const { error } = await sb.storage.from('media').upload(path, file, { contentType: file.type||'application/octet-stream', upsert:false });
@@ -1062,6 +1107,7 @@ async function loadThread(id, quiet){
     const mm=$('msgs'); mm.querySelectorAll('.msg.pending, .msg.failed').forEach(b=>{ if(b.dataset.text && (msgs||[]).some(m=>m.direction==='out'&&m.body===b.dataset.text)) b.remove(); });
     const pend=[...mm.querySelectorAll('.msg.pending, .msg.failed')];
     mm.innerHTML=(msgs||[]).map(msgHtml).join('')||'<div class="empty">No messages yet.</div>'; pend.forEach(b=>mm.appendChild(b));
+    (msgs||[]).forEach(m=>{ const el=mm.querySelector(`.msg[data-id="${m.id}"]`); if(el) el.dataset.status=m.status||''; });
     if (wasBottom) mm.scrollTop=mm.scrollHeight; return;
   }
   threadKey=key; threadConv=id;
@@ -1094,15 +1140,19 @@ async function loadThread(id, quiet){
       ta.value=''; ta.focus(); attached=null; showAttach();
       const mm=$('msgs'); mm.querySelector('.empty')?.remove();
       const bubble=document.createElement('div'); bubble.className='msg out pending'; bubble.dataset.text=text;
-      bubble.innerHTML=`${att?(att.previewUrl?`<img class="media" src="${att.previewUrl}" alt="">`:`<span class="doc">📄 ${esc(att.file.name)}</span>`):''}${esc(text)}<time>${att?'uploading…':'sending…'}</time>`; mm.appendChild(bubble); mm.scrollTop=mm.scrollHeight;
+      bubble.innerHTML=`${att?(att.previewUrl?`<img class="media" src="${att.previewUrl}" alt="">`:`<span class="doc">📄 ${esc(att.file.name)}</span>`):''}${esc(text)}<time>${att?'uploading… ':''}${tickHtml('pending')}</time>`; bubble.classList.add('new'); autoGrow(); mm.appendChild(bubble); mm.scrollTop=mm.scrollHeight;
       (async()=>{ let body={contact_id:id,text};
-        if(att){ const up=await uploadMedia(att.file); body={...body, media_url:up.url, media_mime:up.mime, media_name:up.name}; bubble.querySelector('time').textContent='sending…'; }
-        await api('/api/send-message',{method:'POST',body}); })()
-        .then(()=>{ bubble.classList.remove('pending'); bubble.querySelector('time').textContent=fmtTime(new Date().toISOString())+' · sent'; threadKey=''; loadThread(id,true); })
-        .catch(err=>{ bubble.classList.remove('pending'); bubble.classList.add('failed'); bubble.querySelector('time').textContent='failed — '+err.message; toast(err.message); if(!ta.value) ta.value=text; }); };
+        if(att){ const up=await uploadMedia(att.file); body={...body, media_url:up.url, media_mime:up.mime, media_name:up.name}; bubble.querySelector('time').innerHTML=tickHtml('pending'); }
+        return api('/api/send-message',{method:'POST',body}); })()
+        .then(r=>{ const m=r&&r.message; const dup=m&&$('msgs')?.querySelector(`.msg[data-id="${m.id}"]`);
+          if (dup && dup!==bubble) { bubble.remove(); return; }
+          if (m) claimBubble(bubble, m); else { bubble.classList.remove('pending'); bubble.querySelector('time').innerHTML=fmtTime(new Date().toISOString())+tickHtml('sent'); }
+          clearTimeout(rtDebounce); rtDebounce=setTimeout(()=>loadInbox(true),400); })
+        .catch(err=>{ bubble.classList.remove('pending'); bubble.classList.add('failed'); bubble.querySelector('time').innerHTML=esc('Not sent — '+err.message)+tickHtml('failed'); toast(err.message); if(!ta.value) ta.value=text; }); };
     $('sendReply').addEventListener('pointerdown', e=>{ e.preventDefault(); doSend(); });
     $('sendReply').addEventListener('click', e=>{ if(e.detail===0) doSend(); }); // keyboard activation only; pointer handled above
-    $('reply').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); doSend(); } }); }
+    $('reply').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); doSend(); } });
+    $('reply').addEventListener('input', autoGrow); }
   else { try{ if(!templates.length) templates=(await api('/api/templates')).templates; }catch{}
     const ok=templates.filter(t=>t.status==='APPROVED'); $('replyTpl').innerHTML = ok.length?ok.map(t=>`<option value="${esc(t.name)}|${esc(t.language)}">${esc(t.name)}</option>`).join(''):'<option value="">No approved templates</option>';
     $('sendTpl').onclick=async()=>{ const [template,language]=($('replyTpl').value||'').split('|'); if(!template) return; $('sendTpl').disabled=true;
