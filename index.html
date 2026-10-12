@@ -339,6 +339,12 @@
   html[data-theme=glass] .compose{background:rgba(18,23,31,.9)!important;border-top-color:rgba(255,255,255,.08)!important}
   html[data-theme=glass] .compose textarea{background:rgba(255,255,255,.06)!important;color:#e9edef!important;border-color:rgba(255,255,255,.14)!important}
   html[data-theme=glass] .compose button.icon{border-color:rgba(255,255,255,.14)!important;color:#c6cfda!important}
+
+  html[data-theme=glass] .inbox{background:rgba(11,16,22,.92)!important;border-color:rgba(255,255,255,.08)!important}
+  html[data-theme=glass] .convs{background:transparent!important;border-right-color:rgba(255,255,255,.08)!important}
+  html[data-theme=glass] .thread{background:#0b141a!important}
+  html[data-theme=glass] .msgs{background:transparent!important}
+  html[data-theme=glass] .conv .meta span span,html[data-theme=glass] .conv .chip{background:rgba(255,255,255,.1)!important;color:#c6cfda!important}
 </style>
 </head>
 <body>
@@ -700,10 +706,18 @@ function parseTags(s){ return [...new Set(String(s ?? '').split(/[,;|]/).map(t=>
 function fmtDate(d){ return d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : ''; }
 function fmtTime(d){ return d ? new Date(d).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : ''; }
 function ago(d){ if(!d) return ''; const s=(Date.now()-new Date(d))/1000; if(s<60) return 'now'; if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }
+// Short cache so Billing / Settings / Templates open instantly; any write or a ↻ click clears it.
+const _apiCache = {}; const _CACHEABLE = /^\/api\/(billing|setup|templates)(\?|$)/;
+function clearApiCache(){ for (const k in _apiCache) delete _apiCache[k]; }
+document.addEventListener('click', e => { const b=e.target.closest&&e.target.closest('button'); if (b && b.textContent.trim()==='↻') clearApiCache(); }, true);
 async function api(path, opts={}){
+  const isGet = !opts.method || opts.method==='GET'; const ck = (WS?WS.id:'')+'|'+path;
+  if (isGet && _CACHEABLE.test(path)) { const c=_apiCache[ck]; if (c && Date.now()-c.t < 120000) return c.d; }
+  if (!isGet) clearApiCache();
   const r = await fetch(path, { ...opts, headers: { 'Content-Type':'application/json', Authorization: 'Bearer '+session.access_token, ...(WS?{'X-Workspace-Id':WS.id}:{}), ...(opts.headers||{}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const data = await r.json().catch(()=>({}));
   if (!r.ok) throw new Error(data.error || `Request failed (${r.status})`);
+  if (isGet && _CACHEABLE.test(path)) _apiCache[ck] = { t: Date.now(), d: data };
   return data;
 }
 
@@ -745,6 +759,7 @@ async function boot(){
   $('onboard').classList.add('hidden'); $('app').classList.remove('hidden'); $('who').textContent = ME.email;
   let saved=null; try{ saved=localStorage.getItem(WS_KEY); }catch{}
   selectWorkspace((WORKSPACES.find(w=>w.id===saved)||WORKSPACES[0]).id);
+  setTimeout(()=>{ ['/api/setup','/api/billing','/api/templates'].forEach(p=>api(p).catch(()=>{})); }, 1500);
 }
 function selectWorkspace(id){
   WS = WORKSPACES.find(w=>w.id===id); ROLE = WS.role; try{ localStorage.setItem(WS_KEY, id); }catch{}
