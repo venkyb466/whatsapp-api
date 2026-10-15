@@ -89,6 +89,25 @@ export async function graph(path, { method = 'GET', body, token } = {}) {
 }
 
 // A WhatsApp client bound to one workspace's number and token.
+// Cache of how many {{n}} body variables each approved template has (per WABA, 10 min).
+const _tplParamCache = new Map();
+async function templateBodyParams(ws, g, name, language) {
+  if (!ws?.waba_id || !name) return null;
+  const key = `${ws.waba_id}|${name}|${language || ''}`;
+  const hit = _tplParamCache.get(key);
+  if (hit && Date.now() - hit.at < 10 * 60 * 1000) return hit.n;
+  try {
+    const data = await g(`${ws.waba_id}/message_templates?name=${encodeURIComponent(name)}&fields=name,language,components&limit=50`);
+    const list = (data.data || []).filter((t) => t.name === name);
+    const t = list.find((x) => x.language === language) || list[0];
+    if (!t) return null;
+    const body = t.components?.find((c) => c.type === 'BODY')?.text || '';
+    const n = new Set(body.match(/\{\{\s*[\w]+\s*\}\}/g) || []).size;
+    _tplParamCache.set(key, { n, at: Date.now() });
+    return n;
+  } catch { return null; }
+}
+
 export function wa(ws) {
   if (!ws) throw new Error('Workspace not found');
   if (!ws.phone_number_id || !ws.token) throw new Error('WhatsApp is not connected for this workspace yet (Settings → Connect WhatsApp).');
@@ -100,8 +119,15 @@ export function wa(ws) {
   return {
     graph: g,
     // params: array of strings for body {{1}}..; opts.urlButton: dynamic URL suffix; opts.quickReplies: payload strings per quick-reply button
-    sendTemplate(phone, name, language, params = [], opts = {}) {
+    async sendTemplate(phone, name, language, params = [], opts = {}) {
       const template = { name, language: { code: language || 'en' } };
+      // Send exactly as many body values as the template has {{n}} variables
+      // (a template with no variables must get none, or Meta rejects it with #132000).
+      const need = await templateBodyParams(ws, g, name, language);
+      if (need !== null) {
+        params = (params || []).slice(0, need);
+        while (params.length < need) params.push(params[0] || '-');
+      }
       const components = [];
       if (params.length) components.push({ type: 'body', parameters: params.map((t) => ({ type: 'text', text: String(t ?? '').slice(0, 1024) || '-' })) });
       if (opts.urlButton) components.push({ type: 'button', sub_type: 'url', index: String(opts.urlButtonIndex || 0), parameters: [{ type: 'text', text: String(opts.urlButton) }] });
