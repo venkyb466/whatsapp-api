@@ -155,7 +155,9 @@ async function handleStatus(s) {
   const { data: msgs } = await db.from('messages').select('id,status').eq('wa_message_id', s.id);
   for (const msg of msgs || []) {
     if ((rank[status] || 0) <= (rank[msg.status] || 0) && status !== 'failed') continue;
-    await db.from('messages').update({ status }).eq('id', msg.id);
+    const mp = { status };
+    if (status === 'failed' && errMsg) mp.raw = { error: errMsg, code: s.errors?.[0]?.code || null };
+    await db.from('messages').update(mp).eq('id', msg.id);
   }
   if (status === 'failed' && errMsg) await db.from('automation_jobs').update({ status: 'failed', error: errMsg }).eq('wa_message_id', s.id);
 }
