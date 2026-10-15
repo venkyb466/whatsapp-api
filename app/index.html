@@ -818,6 +818,7 @@ function liveUpdate(m){
   if ((TICK_RANK[m.status]||0) < (TICK_RANK[cur]||0) && m.status!=='failed') return;
   el.dataset.status = m.status || cur;
   const t = el.querySelector('.tick'); if (t) t.outerHTML = tickHtml(m.status);
+  if (m.status==='failed' && !el.querySelector('.ferr')) { const f=failHtml(m); const tm=el.querySelector('time'); if (f && tm) tm.insertAdjacentHTML('beforebegin', f); }
 }
 function nearBottom(mm){ return mm.scrollTop + mm.clientHeight >= mm.scrollHeight - 80; }
 // Add one message to the open thread. If it's our own pending bubble coming back, turn that bubble into the real one.
@@ -1121,7 +1122,11 @@ const SRC_LABEL = { bot:'🤖 Bot', automation:'🛒 Automation', campaign:'📣
 function msgHtml(m){
   if (m.direction==='note') return `<div class="msg note" data-id="${m.id}"><span class="src">📝 Note · ${esc(memberName(m.author_id)||'team')}</span><br>${esc(m.body)}<time>${fmtTime(m.sent_at)}</time></div>`;
   const src = m.direction==='out' ? (SRC_LABEL[m.source] || (m.author_id ? esc(memberName(m.author_id)) : '')) : '';
-  return `<div class="msg ${m.direction}" data-id="${m.id}">${src?`<span class="src">${src}</span><br>`:''}${mediaHtml(m.media_url,m.media_mime,m.media_name)}${m.body?esc(m.body):''}<time>${fmtTime(m.sent_at)}${m.direction==='out'?tickHtml(m.status):''}</time></div>`; }
+  return `<div class="msg ${m.direction}" data-id="${m.id}">${src?`<span class="src">${src}</span><br>`:''}${mediaHtml(m.media_url,m.media_mime,m.media_name)}${m.body?esc(m.body):''}${failHtml(m)}<time>${fmtTime(m.sent_at)}${m.direction==='out'?tickHtml(m.status):''}</time></div>`; }
+// Why Meta didn't deliver a message, in plain words (code comes from the status webhook).
+const FAIL_WHY={131049:'Meta held back this marketing message because this person got many marketing messages recently. Try again in a day or two, or use a Utility template.',131026:'Not deliverable: the number may not be on WhatsApp, or the person hasn\'t accepted WhatsApp\'s latest terms.',131050:'This person has stopped marketing messages from your business.',130472:'Meta is running an experiment on this number and blocked marketing messages to it.',131047:'More than 24 hours since their last reply. Send a template instead.',131042:'Payment issue on the WhatsApp account. Check the balance.',130497:'Your account can\'t message numbers in this country.',132001:'Template name or language doesn\'t match an approved template.',132000:'The number of template variables doesn\'t match.'};
+function failHtml(m){ if(m.direction!=='out'||m.status!=='failed') return ''; const e=m.raw&&m.raw.error; if(!e) return '';
+  const code=(m.raw.code)||parseInt(e,10); return `<div class="ferr" style="margin-top:6px;font-size:12px;color:#b42318">⚠ Not delivered: ${esc(FAIL_WHY[code]||e)}</div>`; }
 const TICK_RANK={pending:0,sent:1,delivered:2,read:3,failed:9};
 function tickHtml(st){ st=st||'sent'; if(st==='failed') return '<span class="tick failed" title="Failed">⚠</span>';
   if(st==='pending') return '<span class="tick" title="Sending">🕓</span>';
