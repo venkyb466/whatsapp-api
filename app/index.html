@@ -1161,13 +1161,14 @@ async function loadThread(id, quiet){
         <button class="sm" id="tNote" title="Internal note, not sent to the customer">📝 Note</button>
         <button class="sm" id="tStatus">${c.conv_status==='closed'?'Reopen':'✓ Close'}</button></div></header>
     <div class="msgs" id="msgs">${(msgs||[]).map(msgHtml).join('')||'<div class="empty">No messages yet.</div>'}</div>
-    ${windowOpen ? `<div class="attachbar hidden" id="attachBar"></div><div class="compose"><button class="icon" id="attachBtn" title="Attach image, video, audio or document">📎</button><input type="file" id="attachFile" class="hidden" accept="image/*,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"><textarea id="reply" placeholder="Type a reply…">${esc(draft)}</textarea><button class="primary" id="sendReply">Send</button></div>`
-      : `<div class="note">You can only send free-text replies within 24 hours of the contact's last message. Send an approved template instead:</div><div class="compose"><select id="replyTpl" style="flex:1"><option value="">Loading templates…</option></select><button class="primary" id="sendTpl">Send template</button></div>`}`;
+    ${windowOpen ? `<div class="attachbar hidden" id="attachBar"></div><div class="compose"><button class="icon" id="attachBtn" title="Attach image, video, audio or document">📎</button><button class="icon" id="tplBtn" title="Send a template">📋</button><input type="file" id="attachFile" class="hidden" accept="image/*,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"><textarea id="reply" placeholder="Type a reply…">${esc(draft)}</textarea><button class="primary" id="sendReply">Send</button></div>`
+      : `<div class="note">You can only send free-text replies within 24 hours of the contact's last message. Send an approved template instead:</div><div class="compose"><select id="replyTpl" style="flex:1"><option value="">Loading templates…</option></select><button class="primary" id="sendTpl">Choose &amp; send</button></div>`}`;
   const m=$('msgs'); if (wasBottom) m.scrollTop=m.scrollHeight;
   $('tAssign').onchange=async(e)=>{ const v=e.target.value||null; const { error } = await sb.from('contacts').update({assigned_to:v}).eq('id',id); if(error) return toast(error.message); toast(v?`Assigned to ${memberName(v)}`:'Unassigned'); loadInbox(); };
   $('tStatus').onclick=async()=>{ const next=c.conv_status==='closed'?'open':'closed'; const { error } = await sb.from('contacts').update({conv_status:next, unread_count:0}).eq('id',id); if(error) return toast(error.message); toast(next==='closed'?'Chat closed':'Chat reopened'); threadKey=''; loadThread(id); loadInbox(); };
   $('tNote').onclick=async()=>{ const t=prompt('Internal note (only your team sees this):'); if(!t||!t.trim()) return;
     const { error } = await sb.from('messages').insert({ workspace_id: WS.id, contact_id:id, direction:'note', body:t.trim(), author_id: ME.id, source:'note', status:'note', msg_type:'note' }); if(error) return toast(error.message); threadKey=''; loadThread(id, true); };
+  if ($('tplBtn')) $('tplBtn').onclick=()=>openTplPicker(id, c.name);
   if (windowOpen) { let attached=null; // { file, previewUrl }
     const showAttach=()=>{ const bar=$('attachBar'); if(!attached){ bar.classList.add('hidden'); bar.innerHTML=''; return; }
       const f=attached.file; bar.classList.remove('hidden');
@@ -1198,8 +1199,37 @@ async function loadThread(id, quiet){
     $('reply').addEventListener('input', autoGrow); }
   else { try{ if(!templates.length) templates=(await api('/api/templates')).templates; }catch{}
     const ok=templates.filter(t=>t.status==='APPROVED'); $('replyTpl').innerHTML = ok.length?ok.map(t=>`<option value="${esc(t.name)}|${esc(t.language)}">${esc(t.name)}</option>`).join(''):'<option value="">No approved templates</option>';
-    $('sendTpl').onclick=async()=>{ const [template,language]=($('replyTpl').value||'').split('|'); if(!template) return; $('sendTpl').disabled=true;
-      try{ await api('/api/send-message',{method:'POST',body:{contact_id:id,template,language}}); toast('Template sent'); await loadThread(id); }catch(err){ toast(err.message); $('sendTpl').disabled=false; } }; }
+    $('sendTpl').onclick=()=>openTplPicker(id, c.name, $('replyTpl').value); }
+}
+
+// ---------- template picker (inbox): send an approved template any time, with variables and a preview ----------
+async function openTplPicker(contactId, contactName, preselect){
+  try{ if(!templates.length) templates=(await api('/api/templates')).templates; }catch(e){ return toast(e.message); }
+  const ok=templates.filter(t=>t.status==='APPROVED');
+  if(!ok.length) return toast('No approved templates yet. Create one in Templates.');
+  document.getElementById('tplPick')?.remove();
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='tplPick';
+  ov.innerHTML=`<div class="modal" style="max-width:520px"><h3 style="margin-top:0">Send a template</h3><p class="muted" style="margin-top:0">Approved templates can be sent any time, even after the 24-hour window.</p>
+    <label>Template</label><select id="tpSel" style="width:100%">${ok.map((t,i)=>`<option value="${i}">${esc(t.name)} (${esc(t.language)})${t.category?' · '+esc(String(t.category).toLowerCase()):''}</option>`).join('')}</select>
+    <div id="tpVars"></div>
+    <label style="display:block;margin-top:10px">Preview</label><div id="tpPrev" style="white-space:pre-wrap;background:#d9fdd3;color:#111b21;border-radius:10px;padding:10px 12px;font-size:14px;max-height:220px;overflow:auto"></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end;gap:8px"><button type="button" class="ghost" id="tpCancel">Cancel</button><button type="button" class="primary" id="tpSend">Send template</button></div></div>`;
+  document.body.appendChild(ov);
+  const sel=ov.querySelector('#tpSel');
+  if(preselect){ const i=ok.findIndex(t=>preselect===t.name+'|'+t.language); if(i>=0) sel.value=String(i); }
+  const nums=t=>[...new Set((t.body||'').match(/\{\{\s*\d+\s*\}\}/g)||[])].map(x=>x.replace(/\D/g,'')).sort((a,b)=>a-b);
+  const draw=()=>{ const t=ok[+sel.value]; const n=nums(t);
+    ov.querySelector('#tpVars').innerHTML=n.map(k=>`<label style="display:block;margin-top:10px">Value for {{${k}}}</label><input class="tpVar" data-k="${k}" style="width:100%" value="${k==='1'?esc(contactName||''):''}" placeholder="Text for {{${k}}}">`).join('');
+    const prev=()=>{ let b=t.body||''; ov.querySelectorAll('.tpVar').forEach(i=>{ b=b.split(new RegExp('\\{\\{\\s*'+i.dataset.k+'\\s*\\}\\}')).join(i.value||'{{'+i.dataset.k+'}}'); });
+      ov.querySelector('#tpPrev').textContent=(t.header?t.header+'\n\n':'')+b+(t.footer?'\n\n'+t.footer:'')+((t.buttons||[]).length?'\n\n[ '+t.buttons.join(' ]  [ ')+' ]':''); };
+    ov.querySelectorAll('.tpVar').forEach(i=>i.oninput=prev); prev(); };
+  sel.onchange=draw; draw();
+  const close=()=>ov.remove(); ov.querySelector('#tpCancel').onclick=close; ov.onclick=e=>{ if(e.target===ov) close(); };
+  ov.querySelector('#tpSend').onclick=async()=>{ const t=ok[+sel.value]; const vals=[...ov.querySelectorAll('.tpVar')].map(i=>i.value.trim());
+    if(vals.some(v=>!v)) return toast('Please fill every variable');
+    const b=ov.querySelector('#tpSend'); b.disabled=true; b.textContent='Sending…';
+    try{ await api('/api/send-message',{method:'POST',body:{contact_id:contactId,template:t.name,language:t.language,params:vals}}); toast('Template sent'); close(); threadKey=''; await loadThread(contactId); }
+    catch(err){ toast(err.message); b.disabled=false; b.textContent='Send template'; } };
 }
 
 // ---------- billing ----------
