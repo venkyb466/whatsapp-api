@@ -113,7 +113,7 @@ export function wa(ws) {
   if (!ws.phone_number_id || !ws.token) throw new Error('WhatsApp is not connected for this workspace yet (Settings → Connect WhatsApp).');
   const g = (path, o = {}) => graph(path, { ...o, token: ws.token });
   const send = async (payload) => {
-    const data = await g(`${ws.phone_number_id}/messages`, { method: 'POST', body: { messaging_product: 'whatsapp', recipient_type: 'individual', ...payload } });
+    const data = await g(`${ws.phone_number_id}/messages`, { method: 'POST', body: { messaging_product: 'whatsapp', recipient_type: 'individual', ...payload, to: normalisePhone(payload.to) || payload.to } });
     return data.messages?.[0]?.id || null;
   };
   return {
@@ -192,7 +192,7 @@ export async function logOutbound(ws, contactId, msgId, { type = 'text', body = 
 
 // Find or create a contact in a workspace by phone number.
 export async function upsertContact(wsId, phone, { name, tags = [], email } = {}) {
-  phone = String(phone || '').replace(/\D/g, '');
+  phone = normalisePhone(phone) || String(phone || '').replace(/\D/g, '');
   if (!phone) return null;
   const { data: existing } = await db.from('contacts').select('*').eq('workspace_id', wsId).eq('phone', phone).maybeSingle();
   if (existing) {
