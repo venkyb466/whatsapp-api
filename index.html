@@ -702,6 +702,7 @@ const isAdmin = () => ROLE === 'owner' || ROLE === 'admin';
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3200); }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function normPhone(p){ return String(p ?? '').replace(/[^\d]/g,''); }
+function normContactPhone(p){ let d=normPhone(p).replace(/^0+/,''); if(d.length===10) d='91'+d; return d; }
 function parseTags(s){ return [...new Set(String(s ?? '').split(/[,;|]/).map(t=>t.trim().toLowerCase()).filter(Boolean))]; }
 function fmtDate(d){ return d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : ''; }
 function fmtTime(d){ return d ? new Date(d).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : ''; }
@@ -940,7 +941,7 @@ $('bulkClear').onclick=()=>{selected.clear();render();};
 function openEdit(c){ editingId=c?c.id:null; $('editTitle').textContent=c?'Edit contact':'Add contact'; $('fName').value=c?c.name:''; $('fPhone').value=c?c.phone:''; $('fTags').value=c?c.tags.join(', '):''; $('editErr').textContent=''; $('editModal').classList.remove('hidden'); $('fName').focus(); }
 $('btnAdd').onclick=()=>openEdit(null); $('editCancel').onclick=()=>$('editModal').classList.add('hidden');
 $('editForm').addEventListener('submit', async (e)=>{
-  e.preventDefault(); const row={ workspace_id: WS.id, name:$('fName').value.trim(), phone:normPhone($('fPhone').value), tags:parseTags($('fTags').value) };
+  e.preventDefault(); const row={ workspace_id: WS.id, name:$('fName').value.trim(), phone:normContactPhone($('fPhone').value), tags:parseTags($('fTags').value) };
   if (row.phone.length<10) { $('editErr').textContent='Phone looks too short — include the country code.'; return; }
   const { error } = await (editingId ? sb.from('contacts').update(row).eq('id',editingId) : sb.from('contacts').insert(row));
   if (error) { $('editErr').textContent = error.code==='23505' ? 'That phone number already exists.' : error.message; return; }
@@ -957,7 +958,7 @@ function handleFile(file){ const r=new FileReader(); r.onload=()=>{
   const h=rows[0].map(x=>x.trim().toLowerCase()); const iN=h.findIndex(x=>/name/.test(x)), iP=h.findIndex(x=>/phone|mobile|number|whatsapp/.test(x)), iT=h.findIndex(x=>/tag/.test(x));
   if (iP<0) return $('uploadErr').textContent='Could not find a phone column. Header should include "phone".';
   const seen=new Set(); parsedRows=[]; let bad=0;
-  for (const row of rows.slice(1)){ const phone=normPhone(row[iP]); if(phone.length<10){bad++;continue;} if (seen.has(phone)) continue; seen.add(phone);
+  for (const row of rows.slice(1)){ const phone=normContactPhone(row[iP]); if(phone.length<10){bad++;continue;} if (seen.has(phone)) continue; seen.add(phone);
     parsedRows.push({ phone, name:(iN>=0?row[iN]:'').trim()||'Customer', tags: iT>=0?parseTags(row[iT]):[] }); }
   $('uploadErr').textContent=''; $('preview').classList.remove('hidden');
   $('preview').textContent = `${parsedRows.length} valid contacts (${bad} skipped for bad phone, ${rows.length-1-parsedRows.length-bad} duplicates in file)\n\n` + parsedRows.slice(0,5).map(p=>`${p.name} — ${p.phone}${p.tags.length?' ['+p.tags.join(', ')+']':''}`).join('\n') + (parsedRows.length>5?'\n…':'');
