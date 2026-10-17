@@ -51,7 +51,12 @@ export async function requireAuth(req, res, opts = {}) {
   const user = data.user;
   const { data: memberships } = await db.from('workspace_members').select('workspace_id, role').eq('user_id', user.id);
   const wanted = req.headers['x-workspace-id'] || req.query?.ws;
-  const m = (memberships || []).find((x) => x.workspace_id === wanted) || (!wanted ? (memberships || [])[0] : null);
+  let m = (memberships || []).find((x) => x.workspace_id === wanted) || null;
+  if (!m && !wanted) {
+    // No workspace chosen yet: prefer one that isn't suspended, so one suspended workspace doesn't lock the user out of the others.
+    for (const x of memberships || []) { const w = await getWorkspace(x.workspace_id); if (w?.status !== 'suspended') { m = x; break; } }
+    if (!m) m = (memberships || [])[0] || null;
+  }
   if (!m) {
     if (opts.noWorkspace) return { via: 'user', user, memberships: memberships || [] };
     json(res, 403, { error: wanted ? 'You are not a member of this workspace' : 'No workspace yet — create one first' });
