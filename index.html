@@ -754,7 +754,7 @@ sb.auth.onAuthStateChange((evt, s) => {
 // ---------- workspaces ----------
 async function boot(){
   $('login').classList.add('hidden');
-  let me; try { me = await api('/api/workspace'); } catch(err){ toast(err.message); return; }
+  let me; try { me = await api('/api/workspace'); } catch(err){ toast(err.message); $('login').classList.remove('hidden'); $('loginErr').textContent=err.message; return; }
   ME = me.user; WORKSPACES = (me.workspaces||[]).filter(w=>w.status!=='suspended'); IS_PADMIN = me.isPlatformAdmin;
   if (!WORKSPACES.length) { await sb.auth.signOut(); $('login').classList.remove('hidden'); $('loginErr').textContent='This account does not have access. Ask the admin to invite you.'; return; }
   $('onboard').classList.add('hidden'); $('app').classList.remove('hidden'); $('who').textContent = ME.email;
