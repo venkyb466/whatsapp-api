@@ -776,7 +776,10 @@ function selectWorkspace(id){
   if (rtChannel) { sb.removeChannel(rtChannel); rtChannel=null; }
   $('thread').innerHTML='<div class="empty" style="margin:auto">Select a conversation</div>';
   loadMembers(); loadContacts(); refreshUnread();
-  showView(!WS.connected && isAdmin() ? 'settings' : 'contacts');
+  // After a page refresh, reopen the page (and chat) the user was on, from the #hash.
+  const [hv,hid]=(location.hash||'').slice(1).split('/'); const hb=hv&&document.querySelector(`button.nav[data-view="${hv}"]`);
+  if (WS.connected && hb && !hb.closest('.hidden')) { showView(hv); if(hv==='inbox' && hid && !window.__convRestored){ window.__convRestored=true; openConv(hid); } }
+  else showView(!WS.connected && isAdmin() ? 'settings' : 'contacts');
 }
 $('wsSwitch').addEventListener('change', async (e)=>{
   if (e.target.value==='__new') { e.target.value=WS.id; const name=prompt('Name of the new workspace (business):'); if(!name) return;
@@ -802,6 +805,7 @@ function showView(v){
   if (v==='automations') loadAutomations();
   if (v==='chatbot') loadBot();
   if (v==='team') loadTeam();
+  try{ if((location.hash||'').slice(1).split('/')[0]!==v) history.replaceState(null,'','#'+v); }catch{}
 }
 // Realtime: new/updated messages push instantly instead of waiting for the poll.
 let rtChannel = null, rtDebounce = null, rtLive = false;
@@ -1112,7 +1116,7 @@ async function loadInbox(listOnly){
 $('convFilter').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; convFilter=b.dataset.f; document.querySelectorAll('#convFilter button').forEach(x=>x.classList.toggle('active',x===b)); loadInbox(); });
 let convSearchT=null; $('convSearch').addEventListener('input', ()=>{ clearTimeout(convSearchT); convSearchT=setTimeout(loadInbox,250); });
 $('convs').addEventListener('click', e=>{ const el=e.target.closest('.conv'); if(el) openConv(el.dataset.id); });
-async function openConv(id){ activeConv=id; document.querySelectorAll('.conv').forEach(el=>el.classList.toggle('active',el.dataset.id===id)); await sb.from('contacts').update({unread_count:0}).eq('id',id); loadThread(id); refreshUnread(); }
+async function openConv(id){ activeConv=id; try{ history.replaceState(null,'','#inbox/'+id); }catch{} document.querySelectorAll('.conv').forEach(el=>el.classList.toggle('active',el.dataset.id===id)); await sb.from('contacts').update({unread_count:0}).eq('id',id); loadThread(id); refreshUnread(); }
 let threadKey = '', threadConv = null;
 function mediaHtml(url, mime, name){ if(!url) return ''; mime=mime||'';
   if (mime.startsWith('image/')) return `<a href="${esc(url)}" target="_blank" rel="noopener"><img class="media" src="${esc(url)}" alt=""></a>`;
