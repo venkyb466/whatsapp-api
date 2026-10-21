@@ -559,6 +559,7 @@
 <div class="overlay hidden" id="uploadModal"><div class="modal">
   <h3>Upload contacts CSV</h3><p>Columns: <b>name, phone</b> and optionally <b>tags</b> (separate with <code class="k">;</code>). Existing numbers are updated, not duplicated.</p>
   <div class="drop" id="drop">Drop a CSV here or <label style="display:inline;color:var(--brand);cursor:pointer;text-decoration:underline;font-weight:400">browse<input type="file" id="file" accept=".csv,text/csv" class="hidden"></label></div>
+  <label>Country of these numbers (used when a number has no country code)</label><select id="uploadCc"><option value="91">India (+91)</option><option value="1">USA / Canada (+1)</option><option value="44">UK (+44)</option><option value="971">UAE (+971)</option><option value="61">Australia (+61)</option><option value="65">Singapore (+65)</option><option value="966">Saudi Arabia (+966)</option></select>
   <label>Add this tag to every uploaded contact (optional)</label><input type="text" id="uploadTag" placeholder="e.g. sept-2026-list">
   <pre class="preview hidden" id="preview"></pre>
   <div class="err" id="uploadErr"></div>
@@ -574,7 +575,7 @@
   <label>Audience</label><select id="cTag"><option value="">All contacts</option></select>
   <div class="muted" id="cCount" style="margin-top:6px"></div>
   <label>Messages per day (drip)</label>
-  <div class="row"><input type="number" id="cDaily" min="1" max="100000" value="250" style="width:120px"> <span class="muted" style="font-size:12px">Sends up to this many in any 24-hour window, then pauses and continues automatically the next day. Leave at or below your Meta messaging limit.</span></div>
+  <div class="row"><input type="number" id="cDaily" min="1" max="100000" value="2000" style="width:120px"> <span class="muted" style="font-size:12px">Sends up to this many in any 24-hour window, then pauses and continues automatically the next day. Leave at or below your Meta messaging limit.</span></div>
   <label>When to send</label>
   <div class="row"><label style="margin:0;font-weight:400"><input type="radio" name="cWhen" value="manual" checked> Start manually</label>
   <label style="margin:0;font-weight:400"><input type="radio" name="cWhen" value="schedule"> Schedule for</label>
@@ -702,7 +703,7 @@ const isAdmin = () => ROLE === 'owner' || ROLE === 'admin';
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3200); }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function normPhone(p){ return String(p ?? '').replace(/[^\d]/g,''); }
-function normContactPhone(p){ let d=normPhone(p).replace(/^0+/,''); if(d.length===10) d='91'+d; return d; }
+function normContactPhone(p, cc='91'){ let d=normPhone(p).replace(/^0+/,''); if(d.length===10 || (cc!=='91' && cc!=='1' && d.length>=7 && d.length<=10 && !d.startsWith(cc))) d=cc+d; return d; }
 function parseTags(s){ return [...new Set(String(s ?? '').split(/[,;|]/).map(t=>t.trim().toLowerCase()).filter(Boolean))]; }
 function fmtDate(d){ return d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : ''; }
 function fmtTime(d){ return d ? new Date(d).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : ''; }
@@ -957,18 +958,20 @@ function parseCSV(text){ const rows=[]; let row=[], f='', inQ=false; for (let i=
   else if (ch==='"') inQ=true; else if (ch===',') { row.push(f); f=''; }
   else if (ch==='\n'||ch==='\r') { if(ch==='\r'&&text[i+1]==='\n') i++; row.push(f); rows.push(row); row=[]; f=''; } else f+=ch; }
   if (f!==''||row.length) { row.push(f); rows.push(row); } return rows.filter(r=>r.some(x=>x.trim()!=='')); }
-function handleFile(file){ const r=new FileReader(); r.onload=()=>{
+let lastUploadFile=null;
+function handleFile(file){ lastUploadFile=file; const cc=$('uploadCc').value||'91'; const r=new FileReader(); r.onload=()=>{
   const rows=parseCSV(r.result.replace(/^﻿/,'')); if (!rows.length) return $('uploadErr').textContent='File is empty.';
   const h=rows[0].map(x=>x.trim().toLowerCase()); const iN=h.findIndex(x=>/name/.test(x)), iP=h.findIndex(x=>/phone|mobile|number|whatsapp/.test(x)), iT=h.findIndex(x=>/tag/.test(x));
   if (iP<0) return $('uploadErr').textContent='Could not find a phone column. Header should include "phone".';
   const seen=new Set(); parsedRows=[]; let bad=0;
-  for (const row of rows.slice(1)){ const phone=normContactPhone(row[iP]); if(phone.length<10){bad++;continue;} if (seen.has(phone)) continue; seen.add(phone);
+  for (const row of rows.slice(1)){ const phone=normContactPhone(row[iP], cc); if(phone.length<10||phone.length>15){bad++;continue;} if (seen.has(phone)) continue; seen.add(phone);
     parsedRows.push({ phone, name:(iN>=0?row[iN]:'').trim()||'Customer', tags: iT>=0?parseTags(row[iT]):[] }); }
   $('uploadErr').textContent=''; $('preview').classList.remove('hidden');
-  $('preview').textContent = `${parsedRows.length} valid contacts (${bad} skipped for bad phone, ${rows.length-1-parsedRows.length-bad} duplicates in file)\n\n` + parsedRows.slice(0,5).map(p=>`${p.name} — ${p.phone}${p.tags.length?' ['+p.tags.join(', ')+']':''}`).join('\n') + (parsedRows.length>5?'\n…':'');
+  $('preview').textContent = `Country code used for numbers without one: +${cc}\n${parsedRows.length} valid contacts (${bad} skipped for bad phone, ${rows.length-1-parsedRows.length-bad} duplicates in file)\n\n` + parsedRows.slice(0,5).map(p=>`${p.name} — ${p.phone}${p.tags.length?' ['+p.tags.join(', ')+']':''}`).join('\n') + (parsedRows.length>5?'\n…':'');
   $('uploadGo').disabled = parsedRows.length===0; }; r.readAsText(file); }
 $('btnUpload').onclick=()=>{ parsedRows=null; $('preview').classList.add('hidden'); $('uploadErr').textContent=''; $('uploadGo').disabled=true; $('file').value=''; $('uploadModal').classList.remove('hidden'); };
 $('uploadCancel').onclick=()=>$('uploadModal').classList.add('hidden');
+$('uploadCc').addEventListener('change', ()=>{ if(lastUploadFile) handleFile(lastUploadFile); });
 $('file').addEventListener('change', e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
 const drop=$('drop'); drop.addEventListener('dragover', e=>{e.preventDefault();drop.classList.add('over')}); drop.addEventListener('dragleave', ()=>drop.classList.remove('over'));
 drop.addEventListener('drop', e=>{e.preventDefault();drop.classList.remove('over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);});
@@ -1091,7 +1094,7 @@ $('campaignForm').addEventListener('submit', async e=>{
   const tag=$('cTag').value||null; const total=all.filter(c=>!c.opted_out && (!tag||c.tags.includes(tag))).length; if(!total) return $('cErr').textContent='No contacts in this audience.';
   const when=document.querySelector('input[name=cWhen]:checked').value; let status='draft', scheduled_at=null;
   if (when==='schedule'){ const v=$('cAt').value; if(!v) return $('cErr').textContent='Pick a date and time.'; const d=new Date(v); if(d.getTime()<Date.now()-60000) return $('cErr').textContent='That time is in the past.'; status='scheduled'; scheduled_at=d.toISOString(); }
-  const daily_limit = Math.max(1, parseInt($('cDaily').value,10) || 250);
+  const daily_limit = Math.max(1, parseInt($('cDaily').value,10) || 2000);
   const { error } = await sb.from('campaigns').insert({ workspace_id: WS.id, name:$('cName').value.trim(), template_name, template_language, audience_tag:tag, total_targeted: total, status, scheduled_at, daily_limit });
   if (error) return $('cErr').textContent=error.message;
   $('campaignModal').classList.add('hidden'); toast(status==='scheduled'?`Scheduled for ${fmtTime(scheduled_at)}`:'Campaign created — press Start when ready'); loadCampaigns();
