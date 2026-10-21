@@ -12,7 +12,17 @@ const CONFIG_ERR = /Missing environment|Invalid OAuth|access token|Unsupported p
 // Errors that mean "daily/throughput limit reached" (try again later, don't mark contacts failed)
 const LIMIT_ERR = /limit|throughput|too many|130429|131056|131048|80007/i;
 
+// Only one runner may send a campaign batch at a time. The dashboard loop and the
+// every-minute cron both call runBatch; without this lock they picked the same
+// pending contacts and sent them duplicates seconds apart (Meta: 130429 rate limit).
 export async function runBatch(campaignId) {
+  const { data: got, error: lockErr } = await db.rpc('campaign_try_lock', { p_campaign_id: campaignId, p_seconds: 50 });
+  if (!lockErr && !got) return { done: false, busy: true, sent: 0, failed: 0 };
+  try { return await runBatchInner(campaignId); }
+  finally { if (!lockErr) await db.from('campaigns').update({ run_lock_until: null }).eq('id', campaignId); }
+}
+
+async function runBatchInner(campaignId) {
   const { data: campaign, error: cErr } = await db.from('campaigns').select('*').eq('id', campaignId).single();
   if (cErr || !campaign) return { error: 'Campaign not found', status: 404 };
   if (campaign.status === 'paused') return { done: false, paused: true, sent: 0, failed: 0 };
