@@ -1063,6 +1063,7 @@ async function startLoop(id){
   while (runningLoops[id]) {
     try {
       const r = await api('/api/run-campaign',{method:'POST',body:{campaign_id:id}});
+      if (r.busy) { await new Promise(ok=>setTimeout(ok,4000)); continue; } // another sender is on this batch
       if (r.error && r.paused) toast('Paused: '+r.error);
       if (r.limit) toast((r.daily?'Daily limit reached':'Meta messaging limit reached')+' — resumes automatically at '+fmtTime(r.scheduled_at));
       await loadCampaigns();
